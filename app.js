@@ -173,10 +173,11 @@ client.once(Events.ClientReady, async () => {
           const upSet = new Set(up?.map(u => u.id).filter(id => id !== client.user.id));
           const downSet = new Set(down?.map(u => u.id).filter(id => id !== client.user.id));
 
-          // 🎯 Вытаскиваем тему и автора из первой строки
           const firstLine = msg.content.split('\n')[0];
-          const topicMatch = firstLine.match(/📊 \*\*(.*?)\*\*/);
-          const authorMatch = firstLine.match(/Автор: \*\*(.*?)\*\*/);
+
+          // 🧩 Универсальные регулярки, чтобы не зависеть от пробелов и Markdown
+          const topicMatch = firstLine.match(/📊\s*\*{0,2}(.*?)\*{0,2}\s+👤/);
+          const authorMatch = firstLine.match(/Автор:\s*\*{0,2}(.*?)\*{0,2}$/);
 
           const topic = topicMatch ? topicMatch[1].trim() : 'Без темы';
           const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
