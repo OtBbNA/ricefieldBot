@@ -116,20 +116,6 @@ client.on('messageReactionRemove', async (reaction, user) => {
   await updatePollMessage(reaction.message, poll);
 });
 
-
-client.on('messageReactionRemove', async (reaction, user) => {
-  if (user.bot) return;
-  const poll = polls.get(reaction.message.id);
-  if (!poll) return;
-
-  const { up, down } = poll.votes;
-
-  up.delete(user.id);
-  down.delete(user.id);
-
-  await updatePollMessage(reaction.message, poll);
-});
-
 // --- Функция обновления ---
 async function updatePollMessage(message, poll) {
   const upCount = poll.votes.up.size;
