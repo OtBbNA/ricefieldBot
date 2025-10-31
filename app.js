@@ -139,7 +139,7 @@ async function updatePollMessage(message, poll) {
   const makeBar = (percent) => {
     const filled = Math.round((percent / 100) * 10);
     const empty = 10 - filled;
-    return ':green_square:'.repeat(filled) + ':red_square:'.repeat(empty);
+    return ':green_square: '.repeat(filled) + ':red_square: '.repeat(empty);
   };
 
   const upBar = makeBar(upPercent);
