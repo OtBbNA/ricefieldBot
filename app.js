@@ -63,15 +63,21 @@ client.on('messageCreate', async (message) => {
     await message.react('👍');
     await message.react('👎');
 
-    const authorMatch = message.content.match(/Автор: \*\*(.*?)\*\*/);
-    const author = authorMatch ? authorMatch[1] : 'Неизвестный пользователь';
+    const firstLine = message.content.split('\n')[0];
+    const topicMatch = firstLine.match(/📊\s*\*{0,2}(.*?)\*{0,2}\s+👤/);
+    const authorMatch = firstLine.match(/Автор:\s*\*{0,2}(.*?)\*{0,2}$/);
+
+    const topic = topicMatch ? topicMatch[1].trim() : 'Без темы';
+    const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
 
     polls.set(message.id, {
-      topic: message.content, author,
+      topic,
+      author,
       votes: { up: new Set(), down: new Set() },
     });
   }
 });
+
 
 // === Обработка реакций ===
 client.on('messageReactionAdd', async (reaction, user) => {
