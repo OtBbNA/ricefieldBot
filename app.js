@@ -47,7 +47,7 @@ app.post(
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
             content:
-            `📊 **${topic}** 👤 Автор: **${author}**\n\n` +
+            `📊 **${topic}**    👤 Автор: **${author}**\n\n` +
             `👍 0 голосов (0%) | коэффициент —\n\n` +
             `👎 0 голосов (0%) | коэффициент —`,
           },
@@ -137,9 +137,10 @@ async function updatePollMessage(message, poll) {
   const downCoef = downPercent > 0 ? (1 / (downPercent / 100)).toFixed(2) : '—';
 
   const makeBar = (percent) => {
-    const filled = Math.round((percent / 100) * 10);
-    const empty = 10 - filled;
-    return ':green_square: '.repeat(filled) + ':red_square: '.repeat(empty);
+    const segments = 16;
+    const filled = Math.round((percent / 100) * segments);
+    const empty = segments - filled;
+    return ':green_square:'.repeat(filled) + ':red_square:'.repeat(empty);
   };
 
   const upBar = makeBar(upPercent);
@@ -148,7 +149,7 @@ async function updatePollMessage(message, poll) {
   const author = poll.author || 'Неизвестный пользователь';
 
   const newContent =
-  `📊 **${topic}** 👤 Автор: **${author}**\n\n` +
+  `📊 **${topic}**    👤 Автор: **${author}**\n\n` +
   `👍 ${upBar} ${upCount} голосов (${upPercent}%) | коэффициент ${upCoef}\n\n` +
   `👎 ${downBar} ${downCount} голосов (${downPercent}%) | коэффициент ${downCoef}`;
 
