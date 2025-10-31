@@ -23,6 +23,38 @@ const client = new Client({
 
 const polls = new Map(); // { messageId: { topic, votes: { up: Set, down: Set } } }
 
+import fs from 'fs';
+
+const POLL_FILE = './polls.json';
+
+// Загружает сохранённые опросы при запуске
+function loadPolls() {
+  if (fs.existsSync(POLL_FILE)) {
+    const data = JSON.parse(fs.readFileSync(POLL_FILE, 'utf8'));
+    for (const [id, poll] of Object.entries(data)) {
+      poll.votes.up = new Set(poll.votes.up);
+      poll.votes.down = new Set(poll.votes.down);
+      polls.set(id, poll);
+    }
+    console.log(`🗂 Загружено ${polls.size} активных опросов`);
+  }
+}
+
+// Сохраняет опросы при изменениях
+function savePolls() {
+  const plain = {};
+  for (const [id, poll] of polls.entries()) {
+    plain[id] = {
+      topic: poll.topic,
+      votes: {
+        up: [...poll.votes.up],
+        down: [...poll.votes.down],
+      },
+    };
+  }
+  fs.writeFileSync(POLL_FILE, JSON.stringify(plain, null, 2));
+}
+
 // --- Discord Interactions (для Slash-команд) ---
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async function (req, res) {
   const { type, data } = req.body;
@@ -57,6 +89,7 @@ client.on('messageCreate', async (message) => {
 
     // Регистрируем опрос
     polls.set(message.id, { topic: message.content, votes: { up: new Set(), down: new Set() } });
+    savePolls();
   }
 });
 
@@ -101,6 +134,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
   }
 
   await updatePollMessage(reaction.message, poll);
+  savePolls();
 });
 
 client.on('messageReactionRemove', async (reaction, user) => {
@@ -156,13 +190,13 @@ async function updatePollMessage(message, poll) {
   await message.edit(newContent);
 }
 
-
 // --- Запуск ---
 client.once('ready', () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
 client.login(process.env.DISCORD_TOKEN);
+loadPolls();
 
 app.listen(PORT, () => {
   console.log(`🌐 Express listening on port ${PORT}`);
