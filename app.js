@@ -39,10 +39,17 @@ app.post(
       const { name } = data;
       if (name === 'market') {
         const topic = data.options[0].value;
+        const author =
+        req.body.member?.user?.username ||
+        req.body.user?.username ||
+        'Неизвестный пользователь';
         return res.send({
           type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
           data: {
-            content: `📊 **${topic}**\n👍 0 голосов (0%) | коэффициент —\n👎 0 голосов (0%) | коэффициент —`,
+            content:
+            `📊 **${topic}** 👤 Автор: **${author}**\n\n` +
+            `👍 0 голосов (0%) | коэффициент —\n\n` +
+            `👎 0 голосов (0%) | коэффициент —`,
           },
         });
       }
@@ -56,8 +63,11 @@ client.on('messageCreate', async (message) => {
     await message.react('👍');
     await message.react('👎');
 
+    const authorMatch = message.content.match(/Автор: \*\*(.*?)\*\*/);
+    const author = authorMatch ? authorMatch[1] : 'Неизвестный пользователь';
+
     polls.set(message.id, {
-      topic: message.content,
+      topic: message.content, author,
       votes: { up: new Set(), down: new Set() },
     });
   }
@@ -129,15 +139,16 @@ async function updatePollMessage(message, poll) {
   const makeBar = (percent) => {
     const filled = Math.round((percent / 100) * 10);
     const empty = 10 - filled;
-    return '‖︎' + ':black_medium_square:'.repeat(filled) + ':white_medium_square:'.repeat(empty) + '‖︎';
+    return ':green_square:'.repeat(filled) + ':red_square:'.repeat(empty);
   };
 
   const upBar = makeBar(upPercent);
   const downBar = makeBar(downPercent);
   const topic = poll.topic.split('\n')[0].replace('📊 ', '');
+  const author = poll.author || 'Неизвестный пользователь';
 
   const newContent =
-  `📊 **${topic}**\n\n` +
+  `📊 **${topic}** 👤 Автор: **${author}**\n\n` +
   `👍 ${upBar} ${upCount} голосов (${upPercent}%) | коэффициент ${upCoef}\n\n` +
   `👎 ${downBar} ${downCount} голосов (${downPercent}%) | коэффициент ${downCoef}`;
 
@@ -160,9 +171,11 @@ client.once(Events.ClientReady, async () => {
 
           const upSet = new Set(up?.map(u => u.id).filter(id => id !== client.user.id));
           const downSet = new Set(down?.map(u => u.id).filter(id => id !== client.user.id));
+          const authorMatch = msg.content.match(/Автор: \*\*(.*?)\*\*/);
+          const author = authorMatch ? authorMatch[1] : 'Неизвестный пользователь';
 
           polls.set(msg.id, {
-            topic: msg.content,
+            topic: msg.content, author,
             votes: { up: upSet, down: downSet },
           });
 
