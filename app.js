@@ -135,10 +135,27 @@ async function updatePollMessage(message, poll) {
   const upCoef = upPercent > 0 ? (1 / (upPercent / 100)).toFixed(2) : '—';
   const downCoef = downPercent > 0 ? (1 / (downPercent / 100)).toFixed(2) : '—';
 
-  const newContent = `📊 **${poll.topic.split('\n')[0].replace('📊 ', '')}**\n👍 ${upCount} голосов (${upPercent}%) | коэффициент ${upCoef}\n👎 ${downCount} голосов (${downPercent}%) | коэффициент ${downCoef}`;
+  // --- Генератор прогресс-бара ---
+  const makeBar = (percent) => {
+    const filled = Math.round((percent / 100) * 10); // 10 сегментов
+    const empty = 10 - filled;
+    return '‖︎' + '◼'.repeat(filled) + '◻'.repeat(empty) + '‖︎';
+  };
+
+  const upBar = makeBar(upPercent);
+  const downBar = makeBar(downPercent);
+
+  const topic = poll.topic.split('\n')[0].replace('📊 ', '');
+
+  const newContent =
+  `📊 **${topic}**\n` +
+  `\n` +
+  `👍 ${upBar} ${upCount} голосов (${upPercent}%) | коэффициент ${upCoef}\n\n` +
+  `👎 ${downBar} ${downCount} голосов (${downPercent}%) | коэффициент ${downCoef}`;
 
   await message.edit(newContent);
 }
+
 
 // --- Запуск ---
 client.once('ready', () => {
