@@ -207,4 +207,56 @@ client.once(Events.ClientReady, async () => {
   app.listen(PORT, () => console.log(`🌐 Express listening on port ${PORT}`));
 });
 
+client.once(Events.ClientReady, async () => {
+console.log('🩹 Восстанавливаю темы у трёх старых сообщений...');
+
+// 🧠 Укажи ID канала, где находятся эти три сообщения
+const channelId = '1433609558655504465';
+const channel = await client.channels.fetch(channelId);
+
+// 🧠 Темы в правильном порядке (сверху вниз)
+const topics = [
+'Проведут ли США ядерные испытания до 06.06.2026',
+'Приедет ли Дима в Казахстан до 01.20.2026',
+'Скажет ли Дима слово "Секс" до 00:00',
+];
+
+// 🧠 Получаем последние 10 сообщений, чтобы точно зацепить нужные три
+const messages = await channel.messages.fetch({ limit: 10 });
+const pollMessages = [...messages.values()]
+  .filter(msg => msg.author.bot && msg.content.startsWith('📊'))
+  .reverse(); // чтобы шли в порядке старые → новые
+
+// Проверяем, что нашли 3
+if (pollMessages.length < 3) {
+console.error(`❌ Найдено только ${pollMessages.length} сообщений 📊`);
+return;
+}
+
+// Обновляем каждое сообщение с новой темой
+for (let i = 0; i < 3; i++) {
+const msg = pollMessages[i];
+const topic = topics[i];
+
+// Сохраняем старого автора, если есть
+const authorMatch = msg.content.match(/Автор:\s*\*{0,2}(.*?)\*{0,2}/);
+const author = authorMatch ? authorMatch[1] : 'Неизвестный пользователь';
+
+// Остальной текст (всё после первой строки)
+const parts = msg.content.split('\n');
+parts.shift(); // удаляем старую первую строку
+const rest = parts.join('\n');
+
+// Формируем новую первую строку
+const newFirstLine = `📊 **${topic}**    👤 Автор: **${author}**`;
+
+const newContent = `${newFirstLine}\n${rest}`;
+
+await msg.edit(newContent);
+console.log(`✅ Восстановлен топик: "${topic}"`);
+}
+
+console.log('🎉 Все темы успешно восстановлены!');
+});
+
 client.login(process.env.DISCORD_TOKEN);
