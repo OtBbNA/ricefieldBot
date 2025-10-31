@@ -67,6 +67,11 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const poll = polls.get(reaction.message.id);
   if (!poll) return;
 
+  if (!['👍', '👎'].includes(reaction.emoji.name)) {
+    await reaction.users.remove(user.id);
+    return;
+  }
+
   const { up, down } = poll.votes;
 
   if (reaction.emoji.name === '👍') {
@@ -103,9 +108,11 @@ client.on('messageReactionRemove', async (reaction, user) => {
   const poll = polls.get(reaction.message.id);
   if (!poll) return;
 
+  if (!['👍', '👎'].includes(reaction.emoji.name)) return;
+
   const key = `${reaction.message.id}_${user.id}`;
   if (ignoreRemovals.has(key)) {
-    ignoreRemovals.delete(key); // пропускаем это событие
+    ignoreRemovals.delete(key);
     return;
   }
 
