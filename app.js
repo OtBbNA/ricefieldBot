@@ -145,7 +145,7 @@ async function updatePollMessage(message, poll) {
 
   const upBar = makeBar(upPercent);
   const downBar = makeBar(downPercent);
-  const topic = poll.topic.split('\n')[0].replace('📊 ', '');
+  const topic = poll.topic;
   const author = poll.author || 'Неизвестный пользователь';
 
   const newContent =
@@ -172,15 +172,21 @@ client.once(Events.ClientReady, async () => {
 
           const upSet = new Set(up?.map(u => u.id).filter(id => id !== client.user.id));
           const downSet = new Set(down?.map(u => u.id).filter(id => id !== client.user.id));
-          const authorMatch = msg.content.match(/Автор: \*\*(.*?)\*\*/);
-          const author = authorMatch ? authorMatch[1] : 'Неизвестный пользователь';
+
+          // 🎯 Вытаскиваем тему и автора из первой строки
+          const firstLine = msg.content.split('\n')[0];
+          const topicMatch = firstLine.match(/📊 \*\*(.*?)\*\*/);
+          const authorMatch = firstLine.match(/Автор: \*\*(.*?)\*\*/);
+
+          const topic = topicMatch ? topicMatch[1].trim() : 'Без темы';
+          const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
 
           polls.set(msg.id, {
-            topic: msg.content, author,
+            topic,
+            author,
             votes: { up: upSet, down: downSet },
           });
 
-          // Пересчитать сообщение
           await updatePollMessage(msg, polls.get(msg.id));
         }
       }
@@ -188,6 +194,7 @@ client.once(Events.ClientReady, async () => {
       // Молча пропускаем недоступные каналы
     }
   }
+
 
   console.log(`🗂 Активных опросов: ${polls.size}`);
   app.listen(PORT, () => console.log(`🌐 Express listening on port ${PORT}`));
