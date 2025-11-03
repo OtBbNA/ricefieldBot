@@ -1,4 +1,3 @@
-//562952100981824
 import 'dotenv/config';
 import { DiscordRequest } from './utils.js';
 
@@ -14,13 +13,24 @@ async function createCommand() {
       {
         name: 'topic',
         description: 'Тема опроса',
-        type: 3,
+        type: 3, // STRING
         required: true,
+      },
+      {
+        name: 'options',
+        description: 'Количество вариантов (2 или 3)',
+        type: 4, // INTEGER
+        required: true,
+        choices: [
+          { name: '2', value: 2 },
+          { name: '3', value: 3 },
+        ],
       },
     ],
   };
 
   try {
+    // create or replace (simple approach: create new - if exists you'll see error)
     const res = await DiscordRequest(endpoint, {
       method: 'POST',
       body: marketCommand,
