@@ -1,10 +1,12 @@
+// commands.js (GUILD version, instant update)
 import 'dotenv/config';
 import { DiscordRequest } from './utils.js';
 
-async function createCommand() {
-  const appId = process.env.APP_ID;
-  const endpoint = `applications/${appId}/commands`;
+const appId = process.env.APP_ID;
+const guildId = '389884655702245376'; // твой сервер
+const endpoint = `applications/${appId}/guilds/${guildId}/commands`;
 
+async function createCommand() {
   const marketCommand = {
     name: 'market',
     description: 'Создаёт опрос с коэффициентами (мини-полимаркет)',
@@ -18,26 +20,25 @@ async function createCommand() {
       },
       {
         name: 'options',
-        description: 'Количество вариантов (2 или 3)',
+        description: 'Количество вариантов ответа',
         type: 4, // INTEGER
         required: true,
         choices: [
-          { name: '2', value: 2 },
-          { name: '3', value: 3 },
+          { name: '2 варианта (👍 👎)', value: 2 },
+          { name: '3 варианта (👍 🤝 👎)', value: 3 },
         ],
       },
     ],
   };
 
   try {
-    // create or replace (simple approach: create new - if exists you'll see error)
     const res = await DiscordRequest(endpoint, {
-      method: 'POST',
-      body: marketCommand,
+      method: 'PUT', // replaces all commands in this guild
+      body: [marketCommand],
     });
-    console.log('✅ Команда /market зарегистрирована:', await res.json());
+    console.log('✅ GUILD команда /market обновлена:', await res.json());
   } catch (err) {
-    console.error('Ошибка установки команды:', err);
+    console.error('❌ Ошибка установки команды:', err);
   }
 }
 
