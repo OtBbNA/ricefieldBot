@@ -381,7 +381,7 @@ async function updatePollMessage(message, poll) {
       ` 👍 ${esc('1;32')}${aCount} ┆ ${aPctStr}% ┆ ${aCoef}${rst}             ${esc('1;30')}┃${rst}             👎 ${esc('1;31')}${cCount} ┆ ${cPctStr}% ┆ ${cCoef}${rst}`;
     }
 
-    const sep = esc('1;30') + '━'.repeat(SEGMENTS) + rst;
+    const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
     // header (visible)
     const header = `📊\n# ${poll.topic}\n-# by: ${poll.author}\n\n`;
