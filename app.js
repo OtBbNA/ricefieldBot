@@ -289,7 +289,7 @@ function buildAnsiBarString(parts, totalVotes) {
 
   const top = esc('1;30') + '┏' + '━'.repeat(SEGMENTS) + '┓' + rst;
   const bot = esc('1;30') + '┗' + '━'.repeat(SEGMENTS) + '┛' + rst;
-  const sep = esc('1;30') + '━'.repeat(SEGMENTS) + rst;
+  const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
   let inside = '';
   for (const p of parts) {
