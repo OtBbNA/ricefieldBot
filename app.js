@@ -212,7 +212,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
     b.add(user.id);
     a.delete(user.id);
     c.delete(user.id);
-  } else if (name === '👎') {
+  } else if (name === '🔴') {
     if (a.has(user.id)) a.delete(user.id);
     if (b.has(user.id)) b.delete(user.id);
 
