@@ -1,4 +1,3 @@
-// app.js — полный файл, поддерживает labels-модалку
 import 'dotenv/config';
 import express from 'express';
 import {
@@ -11,10 +10,6 @@ Client,
 GatewayIntentBits,
 Partials,
 Events,
-ModalBuilder,
-TextInputBuilder,
-TextInputStyle,
-ActionRowBuilder,
 } from 'discord.js';
 
 const app = express();
@@ -32,7 +27,7 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
-// polls map: messageId => { topic, author, optionsCount, votes: { a:Set, b:Set, c:Set } }
+// polls map
 const polls = new Map();
 const ignoreRemovals = new Set();
 
@@ -64,14 +59,13 @@ app.post(
       const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
       const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
 
-      // send modal with labels
       return res.send({
         type: InteractionResponseType.MODAL,
         data: buildLabelsModal(topic, optionsCount),
       });
     }
 
-    // --- modal submit handler ---
+    // --- modal submit ---
     if (type === InteractionType.MODAL_SUBMIT && req.body.data.custom_id === 'market_labels') {
       return handleLabelsSubmit(req, res);
     }
@@ -80,46 +74,72 @@ app.post(
   }
 );
 
-// --- Build labels modal ---
+// --- Build modal (RAW JSON, works 100%) ---
 function buildLabelsModal(topic, optionsCount) {
-  const default1 = 'да';
-  const default2 = optionsCount === 3 ? 'ничья' : 'нет';
-  const default3 = optionsCount === 3 ? 'нет' : '';
+  const fields = [];
 
-  const fields = [
-    new TextInputBuilder()
-      .setCustomId('label1')
-      .setLabel('🟢 —')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false)
-      .setValue(default1),
-
-    new TextInputBuilder()
-      .setCustomId('label2')
-      .setLabel(optionsCount === 3 ? '🔵 —' : '🔴 —')
-      .setStyle(TextInputStyle.Short)
-      .setRequired(false)
-      .setValue(default2),
-  ];
+  fields.push({
+    type: 1,
+    components: [{
+      type: 4,
+      custom_id: 'label1',
+      label: '🟢 —',
+      style: 1,
+      min_length: 0,
+      max_length: 50,
+      required: false,
+      value: 'да',
+    }],
+  });
 
   if (optionsCount === 3) {
-    fields.push(
-      new TextInputBuilder()
-        .setCustomId('label3')
-        .setLabel('🔴 —')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false)
-        .setValue(default3)
-    );
+    fields.push({
+      type: 1,
+      components: [{
+        type: 4,
+        custom_id: 'label2',
+        label: '🔵 —',
+        style: 1,
+        min_length: 0,
+        max_length: 50,
+        required: false,
+        value: 'ничья',
+      }],
+    });
+
+    fields.push({
+      type: 1,
+      components: [{
+        type: 4,
+        custom_id: 'label3',
+        label: '🔴 —',
+        style: 1,
+        min_length: 0,
+        max_length: 50,
+        required: false,
+        value: 'нет',
+      }],
+    });
+  } else {
+    fields.push({
+      type: 1,
+      components: [{
+        type: 4,
+        custom_id: 'label2',
+        label: '🔴 —',
+        style: 1,
+        min_length: 0,
+        max_length: 50,
+        required: false,
+        value: 'нет',
+      }],
+    });
   }
 
   return {
     custom_id: 'market_labels',
     title: `Подписи к вариантам (${topic})`,
-    components: fields.map(f => ({
-      type: 1,
-      components: [f.toJSON()],
-    })),
+    components: fields,
   };
 }
 
@@ -128,13 +148,17 @@ async function handleLabelsSubmit(req, res) {
   const { data, member, user } = req.body;
 
   const topic = data.title.replace(/^Подписи к вариантам \((.*)\)$/i, '$1');
-  const optionsCount = data.components.length === 3 ? 3 : 2;
 
   const author = member?.user?.username || user?.username || 'Неизвестный пользователь';
 
-  const label1 = data.components[0].components[0].value || '';
-  const label2 = data.components[1].components[0].value || '';
-  const label3 = optionsCount === 3 ? (data.components[2].components[0].value || '') : '';
+  const comps = data.components;
+
+  const label1 = comps[0].components[0].value || '';
+  const label2 = comps[1].components[0].value || '';
+  const hasThird = comps.length === 3;
+  const label3 = hasThird ? (comps[2].components[0].value || '') : '';
+
+  const optionsCount = hasThird ? 3 : 2;
 
   const labelsText =
   optionsCount === 3
