@@ -3,7 +3,7 @@ import 'dotenv/config';
 import { DiscordRequest } from './utils.js';
 
 const appId = process.env.APP_ID;
-const guildId = '389884655702245376'; // твой сервер
+const guildId = '389884655702245376';
 const endpoint = `applications/${appId}/guilds/${guildId}/commands`;
 
 async function createCommand() {
@@ -33,7 +33,7 @@ async function createCommand() {
 
   try {
     const res = await DiscordRequest(endpoint, {
-      method: 'PUT', // replaces all commands in this guild
+      method: 'PUT',
       body: [marketCommand],
     });
     console.log('✅ GUILD команда /market обновлена:', await res.json());

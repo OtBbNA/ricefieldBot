@@ -1,4 +1,4 @@
-// app.js — полный, готовый
+// app.js — полный файл, поддерживает labels-модалку
 import 'dotenv/config';
 import express from 'express';
 import {
@@ -6,7 +6,16 @@ InteractionType,
 InteractionResponseType,
 verifyKeyMiddleware,
 } from 'discord-interactions';
-import { Client, GatewayIntentBits, Partials, Events } from 'discord.js';
+import {
+Client,
+GatewayIntentBits,
+Partials,
+Events,
+ModalBuilder,
+TextInputBuilder,
+TextInputStyle,
+ActionRowBuilder,
+} from 'discord.js';
 
 const app = express();
 app.use(express.json());
@@ -50,48 +59,107 @@ app.post(
       return res.send({ type: InteractionResponseType.PONG });
     }
 
-    if (type === InteractionType.APPLICATION_COMMAND) {
-      const { name, options } = data;
-      if (name !== 'market') return res.status(400).send();
+    // --- /market ---
+    if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
+      const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
+      const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
 
-      // parse options: topic (string), options (int 2/3)
-      const topic = (options.find(o => o.name === 'topic')?.value) || 'Без темы';
-      const optsVal = options.find(o => o.name === 'options')?.value;
-      const optionsCount = optsVal === 3 ? 3 : 2;
-
-      const author =
-      req.body.member?.user?.username ||
-      req.body.user?.username ||
-      'Неизвестный пользователь';
-
-      // Compose header — visible part
-      const header = `📊\n# ${topic}\n-# by: ${author} | \u200Boptions:${optionsCount}\u200B\n\n`;
-
-      // Immediately respond — messageCreate will catch the created message and register poll
-      // We include an initial ANSI placeholder (empty gray bar); messageCreate/update will rewrite it.
-      const initialAnsi = generateEmptyAnsiFrameString();
-
-      const content = header + '```ansi\n\n' + initialAnsi + '\n```';
-
+      // send modal with labels
       return res.send({
-        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-        data: {
-          content,
-        },
+        type: InteractionResponseType.MODAL,
+        data: buildLabelsModal(topic, optionsCount),
       });
+    }
+
+    // --- modal submit handler ---
+    if (type === InteractionType.MODAL_SUBMIT && req.body.data.custom_id === 'market_labels') {
+      return handleLabelsSubmit(req, res);
     }
 
     return res.status(400).send();
   }
 );
 
-// --- messageCreate: when bot posts the market message we add reactions and register poll ---
+// --- Build labels modal ---
+function buildLabelsModal(topic, optionsCount) {
+  const default1 = 'да';
+  const default2 = optionsCount === 3 ? 'ничья' : 'нет';
+  const default3 = optionsCount === 3 ? 'нет' : '';
+
+  const fields = [
+    new TextInputBuilder()
+      .setCustomId('label1')
+      .setLabel('🟢 —')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false)
+      .setValue(default1),
+
+    new TextInputBuilder()
+      .setCustomId('label2')
+      .setLabel(optionsCount === 3 ? '🔵 —' : '🔴 —')
+      .setStyle(TextInputStyle.Short)
+      .setRequired(false)
+      .setValue(default2),
+  ];
+
+  if (optionsCount === 3) {
+    fields.push(
+      new TextInputBuilder()
+        .setCustomId('label3')
+        .setLabel('🔴 —')
+        .setStyle(TextInputStyle.Short)
+        .setRequired(false)
+        .setValue(default3)
+    );
+  }
+
+  return {
+    custom_id: 'market_labels',
+    title: `Подписи к вариантам (${topic})`,
+    components: fields.map(f => ({
+      type: 1,
+      components: [f.toJSON()],
+    })),
+  };
+}
+
+// --- modal submit logic ---
+async function handleLabelsSubmit(req, res) {
+  const { data, member, user } = req.body;
+
+  const topic = data.title.replace(/^Подписи к вариантам \((.*)\)$/i, '$1');
+  const optionsCount = data.components.length === 3 ? 3 : 2;
+
+  const author = member?.user?.username || user?.username || 'Неизвестный пользователь';
+
+  const label1 = data.components[0].components[0].value || '';
+  const label2 = data.components[1].components[0].value || '';
+  const label3 = optionsCount === 3 ? (data.components[2].components[0].value || '') : '';
+
+  const labelsText =
+  optionsCount === 3
+  ? `-# 🟢 — ${label1}, 🔵 — ${label2}, 🔴 — ${label3}`
+  : `-# 🟢 — ${label1}, 🔴 — ${label2}`;
+
+  const header = `📊\n# ${topic}\n-# by: ${author} | \u200Boptions:${optionsCount}\u200B\n\n`;
+
+  const initialAnsi = generateEmptyAnsiFrameString();
+  const content = header + '```ansi\n\n' + initialAnsi + '\n```' + '\n' + labelsText;
+
+  return res.send({
+    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+    data: {
+      content,
+    },
+  });
+}
+
+// --- messageCreate (unchanged except emojis) ---
 client.on('messageCreate', async (message) => {
   try {
     if (!message.author?.bot) return;
     if (!message.content.startsWith('📊')) return;
 
-    // parse header: first three lines are expected
     const lines = message.content.split('\n');
     const second = lines[1] || '';
     const third = lines[2] || '';
@@ -100,14 +168,13 @@ client.on('messageCreate', async (message) => {
     const authorMatch = third.match(/by:\s*(.*)$/i);
     const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
 
-    // detect options marker (invisible)
     const markerMatch = message.content.match(/\u200Boptions:(\d)\u200B/);
     const optionsCount = markerMatch ? (parseInt(markerMatch[1], 10) === 3 ? 3 : 2) : 2;
 
-    // fetch existing reactions users to restore votes if any
     let upSet = new Set();
     let midSet = new Set();
     let downSet = new Set();
+
     try {
       const upUsers = await message.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
       const midUsers = await message.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
@@ -116,9 +183,7 @@ client.on('messageCreate', async (message) => {
       upSet = new Set(upUsers ? upUsers.map(u=>u.id).filter(id=>id !== client.user.id) : []);
       midSet = new Set(midUsers ? midUsers.map(u=>u.id).filter(id=>id !== client.user.id) : []);
       downSet = new Set(downUsers ? downUsers.map(u=>u.id).filter(id=>id !== client.user.id) : []);
-    } catch (e) {
-      // ignore
-    }
+    } catch {}
 
     polls.set(message.id, {
       topic,
@@ -127,7 +192,6 @@ client.on('messageCreate', async (message) => {
       votes: { a: upSet, b: midSet, c: downSet },
     });
 
-    // ensure correct reactions exist
     try {
       if (optionsCount === 3) {
         await message.react('🟢');
@@ -137,16 +201,13 @@ client.on('messageCreate', async (message) => {
         await message.react('🟢');
         await message.react('🔴');
       }
-    } catch (err) {
-      // ignore reaction errors
-    }
+    } catch {}
 
-    // normalize visual (rewrite content)
     await updatePollMessage(message, polls.get(message.id));
   } catch (err) {
     console.error('messageCreate error', err);
   }
-});
+}
 
 // --- reaction add/remove handlers ---
 client.on('messageReactionAdd', async (reaction, user) => {
@@ -163,7 +224,6 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const name = safeEmojiName(reaction.emoji);
   const allowed = poll.optionsCount === 3 ? ['🟢','🔵','🔴'] : ['🟢','🔴'];
   if (!allowed.includes(name)) {
-    // remove foreign emoji
     try { await reaction.users.remove(user.id); } catch {}
     return;
   }
@@ -171,11 +231,9 @@ client.on('messageReactionAdd', async (reaction, user) => {
   const { a, b, c } = poll.votes;
 
   if (name === '🟢') {
-    // remove user from others
     if (b.has(user.id)) b.delete(user.id);
     if (c.has(user.id)) c.delete(user.id);
 
-    // visual removal of other reactions
     if (poll.optionsCount === 3) {
       const opp = message.reactions.cache.get('🔵');
       if (opp && opp.users.cache.has(user.id)) {
@@ -192,12 +250,14 @@ client.on('messageReactionAdd', async (reaction, user) => {
     a.add(user.id);
     b.delete(user.id);
     c.delete(user.id);
-  } else if (name === '🔵') {
+  }
+
+  else if (name === '🔵') {
     if (poll.optionsCount !== 3) {
       try { await reaction.users.remove(user.id); } catch {}
       return;
     }
-    // remove others visually
+
     const opp1 = message.reactions.cache.get('🟢');
     const opp3 = message.reactions.cache.get('🔴');
     if (opp1 && opp1.users.cache.has(user.id)) {
@@ -212,11 +272,12 @@ client.on('messageReactionAdd', async (reaction, user) => {
     b.add(user.id);
     a.delete(user.id);
     c.delete(user.id);
-  } else if (name === '🔴') {
+  }
+
+  else if (name === '🔴') {
     if (a.has(user.id)) a.delete(user.id);
     if (b.has(user.id)) b.delete(user.id);
 
-    // visual removal
     const opp = message.reactions.cache.get('🟢');
     if (opp && opp.users.cache.has(user.id)) {
       ignoreRemovals.add(`${message.id}_${user.id}`);
@@ -266,12 +327,10 @@ client.on('messageReactionRemove', async (reaction, user) => {
   await updatePollMessage(message, poll);
 });
 
-// --- ANSI frame / bar generators ---
-
+// --- ANSI bar & frame functions (unchanged) ---
 const SEGMENTS = 66;
 
 function generateEmptyAnsiFrameString() {
-  // produce a full ANSI block as string (without wrapping ```)
   const top = esc('1;30') + '┏' + '━'.repeat(SEGMENTS) + '┓' + rst;
   const middle = esc('1;30') + '┃' + rst + esc('1;30') + '▉'.repeat(SEGMENTS) + rst + esc('1;30') + '┃' + rst;
   const bot = esc('1;30') + '┗' + '━'.repeat(SEGMENTS) + '┛' + rst;
@@ -280,8 +339,6 @@ function generateEmptyAnsiFrameString() {
 }
 
 function buildAnsiBarString(parts, totalVotes) {
-  // parts: array [{count, colorCode}] sum of count <= SEGMENTS
-  // if totalVotes == 0 => full gray frame via generateEmptyAnsiFrameString
   if (totalVotes === 0) return generateEmptyAnsiFrameString();
 
   const top = esc('1;30') + '┏' + '━'.repeat(SEGMENTS) + '┓' + rst;
@@ -293,33 +350,19 @@ function buildAnsiBarString(parts, totalVotes) {
     if (p.count <= 0) continue;
     inside += esc(p.colorCode) + '▉'.repeat(p.count) + rst;
   }
-  const tot = parts.reduce((s,p)=>s+(p.count||0),0);
-  if (tot < SEGMENTS) {
-    inside += esc('1;30') + '▉'.repeat(SEGMENTS - tot) + rst;
+  const filled = parts.reduce((s,p)=>s+(p.count||0),0);
+  if (filled < SEGMENTS) {
+    inside += esc('1;30') + '▉'.repeat(SEGMENTS - filled) + rst;
   }
   const middle = esc('1;30') + '┃' + rst + inside + esc('1;30') + '┃' + rst;
   return `${top}\n${middle}\n${bot}\n${sep}`;
 }
 
-// --- Update message visual ---
+// --- updatePollMessage (same as before except circles & labels preserved) ---
 async function updatePollMessage(message, poll) {
   try {
-    const lines = message.content.split("\n");
-    let headerLines = [];
-    let i = 0;
-    while (i < lines.length && !lines[i].startsWith("```")) {
-      headerLines.push(lines[i]);
-      i++;
-    }
-
-    // Ensure the meta marker exists only once
-    let headerText = headerLines.join("\n");
-    if (!headerText.includes("options:")) {
-      headerText = headerText.replace(
-        /-# by: ([^\n]+)/,
-        `-# by: $1 | \u200Boptions:${poll.optionsCount}\u200B`
-      );
-    }
+    const [headerPart, ...rest] = message.content.split('```ansi');
+    const labelsLine = rest.length > 1 ? rest[1].split('\n').slice(-1)[0] : '';
 
     const aCount = poll.votes.a.size;
     const bCount = poll.votes.b.size;
@@ -330,84 +373,61 @@ async function updatePollMessage(message, poll) {
     const bPercent = total ? (bCount / total * 100) : 0;
     const cPercent = total ? (cCount / total * 100) : 0;
 
-    const pctFmt = (v) => (v === 0 ? '0.00' : v.toFixed(1));
-    const aPctStr = total ? aPercent.toFixed(1) : '0.00';
-    const bPctStr = total ? bPercent.toFixed(1) : '0.00';
-    const cPctStr = total ? cPercent.toFixed(1) : '0.00';
+    const pct = v => (v === 0 ? '0.00' : v.toFixed(1));
+    const coef = (p, v) => (!total || v === 0 ? '0.00' : Math.max(1, (1/(p/100) - 0.1)).toFixed(2));
 
-    const coefFor = (percent, votes) => {
-      if (!total || votes === 0) return '0.00';
-      const p = percent / 100;
-      const raw = (1 / p) - 0.1;
-      const fixed = raw < 1 ? 1.00 : raw;
-      return fixed.toFixed(2);
-    };
+    const aCoef = coef(aPercent, aCount);
+    const bCoef = coef(bPercent, bCount);
+    const cCoef = coef(cPercent, cCount);
 
-    const aCoef = coefFor(aPercent, aCount);
-    const bCoef = coefFor(bPercent, bCount);
-    const cCoef = coefFor(cPercent, cCount);
-
-    // build segments count
-    const segFromPercent = (p) => Math.round((p / 100) * SEGMENTS);
+    const seg = p => Math.round((p/100) * SEGMENTS);
 
     let barStr = '';
     if (poll.optionsCount === 3) {
-      if (total === 0) {
-        barStr = generateEmptyAnsiFrameString();
-      } else {
-        const aSeg = segFromPercent(aPercent);
-        const bSeg = segFromPercent(bPercent);
-        let sumSeg = aSeg + bSeg;
-        let cSeg = SEGMENTS - sumSeg;
-        if (cSeg < 0) cSeg = 0;
-        const parts = [
-          { count: aSeg, colorCode: '1;32' }, // green
-          { count: bSeg, colorCode: '1;34' }, // blue
-          { count: cSeg, colorCode: '1;31' }, // red
-        ];
-        barStr = buildAnsiBarString(parts, total);
+      if (total === 0) barStr = generateEmptyAnsiFrameString();
+      else {
+        const aSeg = seg(aPercent);
+        const bSeg = seg(bPercent);
+        const cSeg = Math.max(0, SEGMENTS - aSeg - bSeg);
+        barStr = buildAnsiBarString([
+          { count: aSeg, colorCode: '1;32' },
+          { count: bSeg, colorCode: '1;34' },
+          { count: cSeg, colorCode: '1;31' },
+        ], total);
       }
     } else {
-      // 2 options: a (green) then c (red)
-      if (total === 0) {
-        barStr = generateEmptyAnsiFrameString();
-      } else {
-        const aSeg = segFromPercent(aPercent);
-        let cSeg = SEGMENTS - aSeg;
-        if (cSeg < 0) cSeg = 0;
-        const parts = [
+      if (total === 0) barStr = generateEmptyAnsiFrameString();
+      else {
+        const aSeg = seg(aPercent);
+        const cSeg = Math.max(0, SEGMENTS - aSeg);
+        barStr = buildAnsiBarString([
           { count: aSeg, colorCode: '1;32' },
           { count: cSeg, colorCode: '1;31' },
-        ];
-        barStr = buildAnsiBarString(parts, total);
+        ], total);
       }
-    }
-
-    // footer line inside ANSI block
-    let footerLine = '';
-    if (poll.optionsCount === 3) {
-      footerLine =
-      `${esc('1;32')} ⬤ ${aCount} ┆ ${aPctStr}% ┆ ${aCoef}${rst}  ${esc('1;30')}┃${rst} ` +
-      `${esc('1;34')} ⬤ ${bCount} ┆ ${bPctStr}% ┆ ${bCoef}${rst}  ${esc('1;30')}┃${rst} ` +
-      `${esc('1;31')} ⬤ ${cCount} ┆ ${cPctStr}% ┆ ${cCoef}${rst}`;
-    } else {
-      footerLine =
-      `${esc('1;32')} ⬤ ${aCount} ┆ ${aPctStr}% ┆ ${aCoef}${rst}             ${esc('1;30')}┃${rst}             ${esc('1;31')} ⬤ ${cCount} ┆ ${cPctStr}% ┆ ${cCoef}${rst}`;
     }
 
     const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
-    // Put EVERYTHING inside the ansi block (bar + sep + footer + sep)
-    const codeBlock =
-    '```ansi\n\n' +
-    barStr + '\n' +
-    // footer & separators inside the code block
-    sep + '\n' +
-    footerLine + '\n' +
-    sep + '\n' +
-    '```';
+    let footer;
+    if (poll.optionsCount === 3) {
+      footer =
+      `${esc('1;32')} ⬤ ${aCount} ┆ ${pct(aPercent)}% ┆ ${aCoef}${rst}  ${esc('1;30')}┃${rst} ` +
+      `${esc('1;34')} ⬤ ${bCount} ┆ ${pct(bPercent)}% ┆ ${bCoef}${rst}  ${esc('1;30')}┃${rst} ` +
+      `${esc('1;31')} ⬤ ${cCount} ┆ ${pct(cPercent)}% ┆ ${cCoef}${rst}`;
+    } else {
+      footer =
+      `${esc('1;32')} ⬤ ${aCount} ┆ ${pct(aPercent)}% ┆ ${aCoef}${rst}             ${esc('1;30')}┃${rst}             ${esc('1;31')} ⬤ ${cCount} ┆ ${pct(cPercent)}% ┆ ${cCoef}${rst}`;
+    }
 
-    const newContent = headerText.trimEnd() + "\n" + codeBlock;
+    const newContent =
+    headerPart.trimEnd() +
+    '\n```ansi\n\n' +
+    barStr + '\n' +
+    sep + '\n' +
+    footer + '\n' +
+    sep + '\n```' +
+    (labelsLine ? '\n' + labelsLine : '');
 
     await message.edit(newContent);
   } catch (err) {
@@ -415,7 +435,7 @@ async function updatePollMessage(message, poll) {
   }
 }
 
-// --- restore polls at startup by scanning channels ---
+// --- restore polls on startup ---
 client.once(Events.ClientReady, async () => {
   console.log(`✅ Logged in as ${client.user.tag}`);
   console.log('🔍 Scanning channels for existing polls...');
@@ -424,23 +444,20 @@ client.once(Events.ClientReady, async () => {
     if (!channel.isTextBased?.()) continue;
     try {
       const messages = await channel.messages.fetch({ limit: 50 });
-      // sort by createdTimestamp ascending to keep original order
       const botPolls = [...messages.values()].filter(m => m.author?.bot && m.content?.startsWith('📊'));
-      // process in natural order (oldest first)
       botPolls.sort((a,b)=>a.createdTimestamp - b.createdTimestamp);
+
       for (const msg of botPolls) {
         const lines = msg.content.split('\n');
-        const second = lines[1] || '';
-        const third = lines[2] || '';
-        const topic = (second.replace(/^#\s*/,'') || 'Без темы').trim();
-        const authorMatch = third.match(/by:\s*(.*)$/i);
+        const topic = (lines[1]?.replace(/^#\s*/,'') || 'Без темы').trim();
+        const authorMatch = lines[2]?.match(/by:\s*(.*)$/i);
         const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
 
-        // detect options marker
         const markerMatch = msg.content.match(/\u200Boptions:(\d)\u200B/);
-        const optionsCount = markerMatch ? (parseInt(markerMatch[1],10)===3 ? 3 : 2) : ( (msg.reactions.cache.has('🔵')) ? 3 : 2 );
+        const optionsCount = markerMatch
+        ? (parseInt(markerMatch[1],10)===3 ? 3 : 2)
+        : (msg.reactions.cache.has('🔵') ? 3 : 2);
 
-        // fetch reaction users
         const upUsers = await msg.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
         const midUsers = await msg.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
         const downUsers = await msg.reactions.cache.get('🔴')?.users.fetch().catch(()=>null);
@@ -451,12 +468,9 @@ client.once(Events.ClientReady, async () => {
 
         polls.set(msg.id, { topic, author, optionsCount, votes: { a: upSet, b: midSet, c: downSet } });
 
-        // normalize display (this will ensure header formatting + hidden marker present)
         await updatePollMessage(msg, polls.get(msg.id));
       }
-    } catch (err) {
-      // ignore channels we can't access
-    }
+    } catch {}
   }
 
   console.log(`🗂 Active polls loaded: ${polls.size}`);
@@ -465,3 +479,4 @@ client.once(Events.ClientReady, async () => {
 
 // --- login ---
 client.login(process.env.DISCORD_TOKEN);
+
