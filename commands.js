@@ -24,8 +24,8 @@ async function createCommand() {
         type: 4, // INTEGER
         required: true,
         choices: [
-          { name: '2 варианта (:green_circle: :red_circle:)', value: 2 },
-          { name: '3 варианта (:green_circle: :blue_circle: :red_circle:)', value: 3 },
+          { name: '2 варианта (🟢 🔴)', value: 2 },
+          { name: '3 варианта (🟢 🔵 🔴)', value: 3 },
         ],
       },
     ],

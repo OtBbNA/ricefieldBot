@@ -109,9 +109,9 @@ client.on('messageCreate', async (message) => {
     let midSet = new Set();
     let downSet = new Set();
     try {
-      const upUsers = await message.reactions.cache.get(':green_circle:')?.users.fetch().catch(()=>null);
-      const midUsers = await message.reactions.cache.get(':blue_circle:')?.users.fetch().catch(()=>null);
-      const downUsers = await message.reactions.cache.get(':red_circle:')?.users.fetch().catch(()=>null);
+      const upUsers = await message.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
+      const midUsers = await message.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
+      const downUsers = await message.reactions.cache.get('🔴')?.users.fetch().catch(()=>null);
 
       upSet = new Set(upUsers ? upUsers.map(u=>u.id).filter(id=>id !== client.user.id) : []);
       midSet = new Set(midUsers ? midUsers.map(u=>u.id).filter(id=>id !== client.user.id) : []);
@@ -130,12 +130,12 @@ client.on('messageCreate', async (message) => {
     // ensure correct reactions exist
     try {
       if (optionsCount === 3) {
-        await message.react(':green_circle:');
-        await message.react(':blue_circle:');
-        await message.react(':red_circle:');
+        await message.react('🟢');
+        await message.react('🔵');
+        await message.react('🔴');
       } else {
-        await message.react(':green_circle:');
-        await message.react(':red_circle:');
+        await message.react('🟢');
+        await message.react('🔴');
       }
     } catch (err) {
       // ignore reaction errors
@@ -161,7 +161,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
   if (!poll) return;
 
   const name = safeEmojiName(reaction.emoji);
-  const allowed = poll.optionsCount === 3 ? [':green_circle:',':blue_circle:',':red_circle:'] : [':green_circle:',':red_circle:'];
+  const allowed = poll.optionsCount === 3 ? ['🟢','🔵','🔴'] : ['🟢','🔴'];
   if (!allowed.includes(name)) {
     // remove foreign emoji
     try { await reaction.users.remove(user.id); } catch {}
@@ -170,20 +170,20 @@ client.on('messageReactionAdd', async (reaction, user) => {
 
   const { a, b, c } = poll.votes;
 
-  if (name === ':green_circle:') {
+  if (name === '🟢') {
     // remove user from others
     if (b.has(user.id)) b.delete(user.id);
     if (c.has(user.id)) c.delete(user.id);
 
     // visual removal of other reactions
     if (poll.optionsCount === 3) {
-      const opp = message.reactions.cache.get(':blue_circle:');
+      const opp = message.reactions.cache.get('🔵');
       if (opp && opp.users.cache.has(user.id)) {
         ignoreRemovals.add(`${message.id}_${user.id}`);
         try { await opp.users.remove(user.id); } catch {}
       }
     }
-    const opp2 = message.reactions.cache.get(':red_circle:');
+    const opp2 = message.reactions.cache.get('🔴');
     if (opp2 && opp2.users.cache.has(user.id)) {
       ignoreRemovals.add(`${message.id}_${user.id}`);
       try { await opp2.users.remove(user.id); } catch {}
@@ -192,14 +192,14 @@ client.on('messageReactionAdd', async (reaction, user) => {
     a.add(user.id);
     b.delete(user.id);
     c.delete(user.id);
-  } else if (name === ':blue_circle:') {
+  } else if (name === '🔵') {
     if (poll.optionsCount !== 3) {
       try { await reaction.users.remove(user.id); } catch {}
       return;
     }
     // remove others visually
-    const opp1 = message.reactions.cache.get(':green_circle:');
-    const opp3 = message.reactions.cache.get(':red_circle:');
+    const opp1 = message.reactions.cache.get('🟢');
+    const opp3 = message.reactions.cache.get('🔴');
     if (opp1 && opp1.users.cache.has(user.id)) {
       ignoreRemovals.add(`${message.id}_${user.id}`);
       try { await opp1.users.remove(user.id); } catch {}
@@ -217,13 +217,13 @@ client.on('messageReactionAdd', async (reaction, user) => {
     if (b.has(user.id)) b.delete(user.id);
 
     // visual removal
-    const opp = message.reactions.cache.get(':green_circle:');
+    const opp = message.reactions.cache.get('🟢');
     if (opp && opp.users.cache.has(user.id)) {
       ignoreRemovals.add(`${message.id}_${user.id}`);
       try { await opp.users.remove(user.id); } catch {}
     }
     if (poll.optionsCount === 3) {
-      const opp2 = message.reactions.cache.get(':blue_circle:');
+      const opp2 = message.reactions.cache.get('🔵');
       if (opp2 && opp2.users.cache.has(user.id)) {
         ignoreRemovals.add(`${message.id}_${user.id}`);
         try { await opp2.users.remove(user.id); } catch {}
@@ -250,7 +250,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
   if (!poll) return;
 
   const name = safeEmojiName(reaction.emoji);
-  const allowed = poll.optionsCount === 3 ? [':green_circle:',':blue_circle:',':red_circle:'] : [':green_circle:',':red_circle:'];
+  const allowed = poll.optionsCount === 3 ? ['🟢','🔵','🔴'] : ['🟢','🔴'];
   if (!allowed.includes(name)) return;
 
   const key = `${message.id}_${user.id}`;
@@ -438,12 +438,12 @@ client.once(Events.ClientReady, async () => {
 
         // detect options marker
         const markerMatch = msg.content.match(/\u200Boptions:(\d)\u200B/);
-        const optionsCount = markerMatch ? (parseInt(markerMatch[1],10)===3 ? 3 : 2) : ( (msg.reactions.cache.has(':blue_circle:')) ? 3 : 2 );
+        const optionsCount = markerMatch ? (parseInt(markerMatch[1],10)===3 ? 3 : 2) : ( (msg.reactions.cache.has('🔵')) ? 3 : 2 );
 
         // fetch reaction users
-        const upUsers = await msg.reactions.cache.get(':green_circle:')?.users.fetch().catch(()=>null);
-        const midUsers = await msg.reactions.cache.get(':blue_circle:')?.users.fetch().catch(()=>null);
-        const downUsers = await msg.reactions.cache.get(':red_circle:')?.users.fetch().catch(()=>null);
+        const upUsers = await msg.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
+        const midUsers = await msg.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
+        const downUsers = await msg.reactions.cache.get('🔴')?.users.fetch().catch(()=>null);
 
         const upSet = new Set(upUsers ? upUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
         const midSet = new Set(midUsers ? midUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
