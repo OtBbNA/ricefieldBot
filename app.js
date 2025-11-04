@@ -231,7 +231,7 @@ client.on('messageCreate', async (message) => {
   } catch (err) {
     console.error('messageCreate error', err);
   }
-}
+});
 
 // --- reaction add/remove handlers ---
 client.on('messageReactionAdd', async (reaction, user) => {
