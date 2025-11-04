@@ -65,7 +65,7 @@ app.post(
       'Неизвестный пользователь';
 
       // Compose header — visible part
-      const header = `📊\n# ${topic}\n-# by: ${author}\n\n`;
+      const header = `📊\n# ${topic}\n-# by: ${author} `;
 
       // Invisible marker so messageCreate can see optionsCount later
       const hiddenMarker = `\u200Boptions:${optionsCount}\u200B`;
@@ -384,7 +384,7 @@ async function updatePollMessage(message, poll) {
     const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
     // header (visible)
-    const header = `📊\n# ${poll.topic}\n-# by: ${poll.author}\n\n`;
+    const header = `📊\n# ${poll.topic}\n-# by: ${poll.author} `;
 
     // keep hidden options marker inside content so updates won't lose it
     const hiddenMarker = `\u200Boptions:${poll.optionsCount}\u200B`;
