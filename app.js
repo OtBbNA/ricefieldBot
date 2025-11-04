@@ -304,6 +304,23 @@ function buildAnsiBarString(parts, totalVotes) {
 // --- Update message visual ---
 async function updatePollMessage(message, poll) {
   try {
+    const lines = message.content.split("\n");
+    let headerLines = [];
+    let i = 0;
+    while (i < lines.length && !lines[i].startsWith("```")) {
+      headerLines.push(lines[i]);
+      i++;
+    }
+
+    // Ensure the meta marker exists only once
+    let headerText = headerLines.join("\n");
+    if (!headerText.includes("options:")) {
+      headerText = headerText.replace(
+        /-# by: ([^\n]+)/,
+        `-# by: $1 | \u200Boptions:${poll.optionsCount}\u200B`
+      );
+    }
+
     const aCount = poll.votes.a.size;
     const bCount = poll.votes.b.size;
     const cCount = poll.votes.c.size;
@@ -380,9 +397,6 @@ async function updatePollMessage(message, poll) {
 
     const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
-    // header (visible)
-    const header = `📊\n# ${poll.topic}\n-# by: ${poll.author} | \u200Boptions:${poll.optionsCount}\u200B\n\n`;
-
     // Put EVERYTHING inside the ansi block (bar + sep + footer + sep)
     const codeBlock =
     '```ansi\n\n' +
@@ -393,7 +407,7 @@ async function updatePollMessage(message, poll) {
     sep + '\n' +
     '```';
 
-    const newContent = header + codeBlock;
+    const newContent = headerText + "\n\n" + codeBlock;
 
     await message.edit(newContent);
   } catch (err) {
