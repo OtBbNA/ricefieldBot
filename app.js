@@ -65,16 +65,13 @@ app.post(
       'Неизвестный пользователь';
 
       // Compose header — visible part
-      const header = `📊\n# ${topic}\n-# by: ${author} `;
-
-      // Invisible marker so messageCreate can see optionsCount later
-      const hiddenMarker = `\u200Boptions:${optionsCount}\u200B \n`;
+      const header = `📊\n# ${topic}\n-# by: ${author} | \u200Boptions:${optionsCount}\u200B\n\n`;
 
       // Immediately respond — messageCreate will catch the created message and register poll
       // We include an initial ANSI placeholder (empty gray bar); messageCreate/update will rewrite it.
       const initialAnsi = generateEmptyAnsiFrameString();
 
-      const content = header + hiddenMarker + '```ansi\n\n' + initialAnsi + '\n```';
+      const content = header + '```ansi\n\n' + initialAnsi + '\n```';
 
       return res.send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -384,10 +381,7 @@ async function updatePollMessage(message, poll) {
     const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
     // header (visible)
-    const header = `📊\n# ${poll.topic}\n-# by: ${poll.author} `;
-
-    // keep hidden options marker inside content so updates won't lose it
-    const hiddenMarker = `\u200Boptions:${poll.optionsCount}\u200B \n`;
+    const header = `📊\n# ${poll.topic}\n-# by: ${poll.author} | \u200Boptions:${poll.optionsCount}\u200B\n\n`;
 
     // Put EVERYTHING inside the ansi block (bar + sep + footer + sep)
     const codeBlock =
@@ -399,7 +393,7 @@ async function updatePollMessage(message, poll) {
     sep + '\n' +
     '```';
 
-    const newContent = header + hiddenMarker + codeBlock;
+    const newContent = header + codeBlock;
 
     await message.edit(newContent);
   } catch (err) {
