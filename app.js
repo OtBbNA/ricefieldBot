@@ -68,7 +68,7 @@ app.post(
       const header = `📊\n# ${topic}\n-# by: ${author} `;
 
       // Invisible marker so messageCreate can see optionsCount later
-      const hiddenMarker = `\u200Boptions:${optionsCount}\u200B`;
+      const hiddenMarker = `\u200Boptions:${optionsCount}\u200B \n`;
 
       // Immediately respond — messageCreate will catch the created message and register poll
       // We include an initial ANSI placeholder (empty gray bar); messageCreate/update will rewrite it.
@@ -387,7 +387,7 @@ async function updatePollMessage(message, poll) {
     const header = `📊\n# ${poll.topic}\n-# by: ${poll.author} `;
 
     // keep hidden options marker inside content so updates won't lose it
-    const hiddenMarker = `\u200Boptions:${poll.optionsCount}\u200B`;
+    const hiddenMarker = `\u200Boptions:${poll.optionsCount}\u200B \n`;
 
     // Put EVERYTHING inside the ansi block (bar + sep + footer + sep)
     const codeBlock =
