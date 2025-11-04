@@ -407,7 +407,7 @@ async function updatePollMessage(message, poll) {
     sep + '\n' +
     '```';
 
-    const newContent = headerText + codeBlock;
+    const newContent = headerText.trimEnd() + "\n" + codeBlock;
 
     await message.edit(newContent);
   } catch (err) {
