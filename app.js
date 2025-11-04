@@ -330,10 +330,10 @@ async function updatePollMessage(message, poll) {
     const bPercent = total ? (bCount / total * 100) : 0;
     const cPercent = total ? (cCount / total * 100) : 0;
 
-    const pctFmt = (v) => (v === 0 ? '00.0' : v.toFixed(1));
-    const aPctStr = total ? aPercent.toFixed(1) : '00.0';
-    const bPctStr = total ? bPercent.toFixed(1) : '00.0';
-    const cPctStr = total ? cPercent.toFixed(1) : '00.0';
+    const pctFmt = (v) => (v === 0 ? '0.00' : v.toFixed(1));
+    const aPctStr = total ? aPercent.toFixed(1) : '0.00';
+    const bPctStr = total ? bPercent.toFixed(1) : '0.00';
+    const cPctStr = total ? cPercent.toFixed(1) : '0.00';
 
     const coefFor = (percent, votes) => {
       if (!total || votes === 0) return '0.00';
@@ -407,7 +407,7 @@ async function updatePollMessage(message, poll) {
     sep + '\n' +
     '```';
 
-    const newContent = headerText + "\n\n" + codeBlock;
+    const newContent = headerText + codeBlock;
 
     await message.edit(newContent);
   } catch (err) {
