@@ -131,7 +131,7 @@ function generateEmptyAnsiFrameString() {
   const top = esc('1;30') + '┏' + '━'.repeat(SEGMENTS) + '┓' + rst;
   const middle = esc('1;30') + '┃' + rst + esc('1;30') + '▉'.repeat(SEGMENTS) + rst + esc('1;30') + '┃' + rst;
   const bot = esc('1;30') + '┗' + '━'.repeat(SEGMENTS) + '┛' + rst;
-  return `${top}\n${middle}\n${bot}\n${sep}`;
+  return `${top}\n${middle}\n${bot}\n`;
 }
 
 function buildAnsiBarString(parts, totalVotes) {
