@@ -324,8 +324,8 @@ async function handleLabelsSubmit(req, res) {
 
     // build labels line (single-line)
     const labelsText = optionsCount === 3
-    ? `-# 🟢 — ${label1}, 🔵 — ${label2}, 🔴 — ${label3}`
-    : `-# 🟢 — ${label1}, 🔴 — ${label2}`;
+    ? `-# 🟢 — ${label1},   🔵 — ${label2},   🔴 — ${label3}`
+    : `-# 🟢 — ${label1},   🔴 — ${label2}`;
 
     const header = `📊\n# ${topic}\n-# by: ${author} | \u200Boptions:${optionsCount}\u200B\n\n`;
     const initialAnsi = generateEmptyAnsiFrameString();
