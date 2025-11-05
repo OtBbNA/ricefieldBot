@@ -273,7 +273,6 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (re
   }
 });
 
-// --- modal submit handler ---
 async function handleLabelsSubmit(req, res) {
   try {
     const { data, member, user } = req.body;
@@ -316,13 +315,29 @@ async function handleLabelsSubmit(req, res) {
     : `-# 🟢 — ${label1},   🔴 — ${label2}`;
 
     const header = `📊\n# ${topic}\n-# by: ${author} | \u200Boptions:${optionsCount}\u200B\n\n`;
+
+    // initial ansi frame (no sep inside)
     const initialAnsi = generateEmptyAnsiFrameString();
+
+    // build sep & empty footer locally (so we don't depend on generateEmptyAnsiFrameString to provide sep)
+    const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
+
+    const emptyFooter = optionsCount === 3
+    ? `${esc('1;32')} ⬤ 0 ┆ 0.00% ┆ 0.00${rst}  ${esc('1;30')}┃${rst} ` +
+    `${esc('1;34')} ⬤ 0 ┆ 0.00% ┆ 0.00${rst}  ${esc('1;30')}┃${rst} ` +
+    `${esc('1;31')} ⬤ 0 ┆ 0.00% ┆ 0.00${rst}`
+    : `${esc('1;32')} ⬤ 0 ┆ 0.00% ┆ 0.00${rst}` +
+    `             ${esc('1;30')}┃${rst}             ` +
+    `${esc('1;31')} ⬤ 0 ┆ 0.00% ┆ 0.00${rst}`;
 
     const content =
     header +
-    '```ansi\n\n' +
-    initialAnsi +
-    '\n```' +
+    '```ansi\n' +
+    initialAnsi + '\n' +
+    sep + '\n' +
+    emptyFooter + '\n' +
+    sep + '\n' +
+    '```' +
     '\n' +
     labelsText;
 
@@ -336,9 +351,15 @@ async function handleLabelsSubmit(req, res) {
   } catch (err) {
     console.error('handleLabelsSubmit error', err);
     // ensure we answer so Discord doesn't show "interaction failed"
-    try { return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: 'Произошла ошибка при создании опроса.' } }); } catch { return; }
+    try {
+      return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { content: 'Произошла ошибка при создании опроса.' },
+      });
+    } catch { return; }
   }
 }
+
 
 // --- messageCreate: register bot-created polls, ensure reactions, restore votes
 client.on('messageCreate', async (message) => {
@@ -400,7 +421,6 @@ client.on('messageCreate', async (message) => {
   }
 });
 
-// --- reaction add/remove handlers ---
 client.on('messageReactionAdd', async (reaction, user) => {
   if (user.bot) return;
   if (reaction.partial) {
