@@ -154,81 +154,75 @@ function buildAnsiBarString(parts, totalVotes) {
   return `${top}\n${middle}\n${bot}\n${sep}`;
 }
 
-// --- Update poll message: redraw ANSI + footer, preserve labels line (if any) ---
 async function updatePollMessage(message, poll) {
   try {
-    const parts = message.content.split('```');
-    const headerPart = parts[0] || '';
+    const [headerPart, ...rest] = message.content.split('```ansi');
 
-    // labels: everything after last code fence, but do NOT trim internal spacing
-    const labelsLine = parts.length > 2 ? parts[parts.length - 1].replace(/\n+$/, '') : '';
+    // extract labels (everything after final ```), one-line forced
+    let labelsLine = '';
+    const lastBlock = rest.length > 0 ? rest[rest.length - 1] : '';
+    if (lastBlock.includes('```')) {
+      const afterFence = lastBlock.split('```')[1] || '';
+      labelsLine = afterFence.trim().replace(/\s+/g, ' ');
+    }
 
     const aCount = poll.votes.a.size;
     const bCount = poll.votes.b.size;
     const cCount = poll.votes.c.size;
     const total = aCount + bCount + cCount;
 
-    const pct = (v) => (total ? ((v / total) * 100) : 0);
-    const pctFmt = (v) => (v === 0 ? '0.00' : v.toFixed(1));
+    const pct = (v) => (v === 0 ? '0.00' : v.toFixed(1));
+    const seg = (p) => Math.round((p / 100) * SEGMENTS);
 
-    const coefFor = (p, v) => {
-      if (!total || v === 0) return '0.00';
-      const raw = (1 / (p / 100)) - 0.1;
-      return (raw < 1 ? 1.0 : raw).toFixed(2);
-    };
+    const aPercent = total ? (aCount / total * 100) : 0;
+    const bPercent = total ? (bCount / total * 100) : 0;
+    const cPercent = total ? (cCount / total * 100) : 0;
 
-    const aPercent = pct(aCount);
-    const bPercent = pct(bCount);
-    const cPercent = pct(cCount);
+    const coef = (p, v) => (!total || v === 0 ? '0.00' : Math.max(1, (1 / (p / 100) - 0.1)).toFixed(2));
 
-    const aCoef = coefFor(aPercent, aCount);
-    const bCoef = coefFor(bPercent, bCount);
-    const cCoef = coefFor(cPercent, cCount);
+    const aCoef = coef(aPercent, aCount);
+    const bCoef = coef(bPercent, bCount);
+    const cCoef = coef(cPercent, cCount);
 
-    const segFromPercent = (p) => Math.round((p / 100) * SEGMENTS);
-
-    let barStr = '';
+    let barStr;
     if (total === 0) {
       barStr = generateEmptyAnsiFrameString();
+    } else if (poll.optionsCount === 3) {
+      const aSeg = seg(aPercent);
+      const bSeg = seg(bPercent);
+      const cSeg = Math.max(0, SEGMENTS - aSeg - bSeg);
+      barStr = buildAnsiBarString([
+        { count: aSeg, colorCode: '1;32' },
+        { count: bSeg, colorCode: '1;34' },
+        { count: cSeg, colorCode: '1;31' },
+      ], total);
     } else {
-      if (poll.optionsCount === 3) {
-        const aSeg = segFromPercent(aPercent);
-        const bSeg = segFromPercent(bPercent);
-        let cSeg = SEGMENTS - (aSeg + bSeg);
-        if (cSeg < 0) cSeg = 0;
-        barStr = buildAnsiBarString([
-          { count: aSeg, colorCode: '1;32' },
-          { count: bSeg, colorCode: '1;34' },
-          { count: cSeg, colorCode: '1;31' },
-        ], total);
-      } else {
-        const aSeg = segFromPercent(aPercent);
-        const cSeg = Math.max(0, SEGMENTS - aSeg);
-        barStr = buildAnsiBarString([
-          { count: aSeg, colorCode: '1;32' },
-          { count: cSeg, colorCode: '1;31' },
-        ], total);
-      }
+      const aSeg = seg(aPercent);
+      const cSeg = Math.max(0, SEGMENTS - aSeg);
+      barStr = buildAnsiBarString([
+        { count: aSeg, colorCode: '1;32' },
+        { count: cSeg, colorCode: '1;31' },
+      ], total);
     }
 
     const sep = esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
 
-    let footer = '';
+    let footer;
     if (poll.optionsCount === 3) {
       footer =
-      `${esc('1;32')} ⬤ ${aCount} ┆ ${pctFmt(aPercent)}% ┆ ${aCoef}${rst}  ${esc('1;30')}┃${rst} ` +
-      `${esc('1;34')} ⬤ ${bCount} ┆ ${pctFmt(bPercent)}% ┆ ${bCoef}${rst}  ${esc('1;30')}┃${rst} ` +
-      `${esc('1;31')} ⬤ ${cCount} ┆ ${pctFmt(cPercent)}% ┆ ${cCoef}${rst}`;
+      `${esc('1;32')} ⬤ ${aCount} ┆ ${pct(aPercent)}% ┆ ${aCoef}${rst}  ${esc('1;30')}┃${rst} ` +
+      `${esc('1;34')} ⬤ ${bCount} ┆ ${pct(bPercent)}% ┆ ${bCoef}${rst}  ${esc('1;30')}┃${rst} ` +
+      `${esc('1;31')} ⬤ ${cCount} ┆ ${pct(cPercent)}% ┆ ${cCoef}${rst}`;
     } else {
       footer =
-      `${esc('1;32')} ⬤ ${aCount} ┆ ${pctFmt(aPercent)}% ┆ ${aCoef}${rst}` +
-      `             ${esc('1;30')}┃${rst}             ` +
-      `${esc('1;31')} ⬤ ${cCount} ┆ ${pctFmt(cPercent)}% ┆ ${cCoef}${rst}`;
+      `${esc('1;32')} ⬤ ${aCount} ┆ ${pct(aPercent)}% ┆ ${aCoef}${rst}             ` +
+      `${esc('1;30')}┃${rst}             ` +
+      `${esc('1;31')} ⬤ ${cCount} ┆ ${pct(cPercent)}% ┆ ${cCoef}${rst}`;
     }
 
     const newContent =
     headerPart.trimEnd() +
-    '\n```ansi\n\n' +
+    '\n```ansi\n' +
     barStr + '\n' +
     sep + '\n' +
     footer + '\n' +
@@ -236,10 +230,12 @@ async function updatePollMessage(message, poll) {
     (labelsLine ? '\n' + labelsLine : '');
 
     await message.edit(newContent);
+
   } catch (err) {
     console.error('updatePollMessage error', err);
   }
 }
+
 
 // --- interactions endpoint (slash + modal submit) ---
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
