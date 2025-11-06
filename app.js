@@ -11,47 +11,45 @@ import fs from 'fs';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
-  try {
-    let body = req.body;
-    if (Buffer.isBuffer(body)) {
-      body = JSON.parse(body.toString('utf8'));
-    }
-    const { type, data } = body;
-
-    if (type === InteractionType.PING) {
-      return res.send({ type: InteractionResponseType.PONG });
-    }
-
-    // Slash: /market
-    if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
-      // parse options
-      const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
-      const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
-
-      return res.send({
-        type: InteractionResponseType.MODAL,
-        data: buildLabelsModal(topic, optionsCount),
-      });
-    }
-
-    if (type === InteractionType.MODAL_SUBMIT && data && typeof data.custom_id === 'string' && data.custom_id.startsWith('market_labels|')) {
-      return handleLabelsSubmit(req, res, body);
-    }
-
-    return res.status(400).send();
-  }  catch (err) {
-    console.error('interactions error', err);
+app.post(
+  '/interactions',
+  express.raw({ type: '*/*' }),                // 1. keep raw body
+  verifyKeyMiddleware(process.env.PUBLIC_KEY), // 2. verify signature
+  async (req, res) => {                        // 3. handle interaction
     try {
+      const body = JSON.parse(req.body.toString('utf8'));
+      const { type, data } = body;
+
+      if (type === InteractionType.PING) {
+        return res.send({ type: InteractionResponseType.PONG });
+      }
+
+      // Slash: /market
+      if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
+        const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
+        const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
+
+        return res.send({
+          type: InteractionResponseType.MODAL,
+          data: buildLabelsModal(topic, optionsCount),
+        });
+      }
+
+      // Modal submit
+      if (type === InteractionType.MODAL_SUBMIT && data?.custom_id?.startsWith('market_labels|')) {
+        return handleLabelsSubmit(body, res);
+      }
+
+      return res.status(400).send();
+    } catch (err) {
+      console.error('interactions error', err);
       return res.status(500).send({
         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
         data: { content: 'Произошла ошибка.' },
       });
-    } catch {
-      return;
     }
   }
-});
+);
 
 app.use(express.json());
 
