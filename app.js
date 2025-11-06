@@ -10,22 +10,24 @@ import fs from 'fs';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const client = new Client({
+  intents: [
+    GatewayIntentBits.Guilds,
+    GatewayIntentBits.GuildMessages,
+    GatewayIntentBits.MessageContent,
+    GatewayIntentBits.GuildMessageReactions,
+  ],
+  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
+});
 
 app.post(
   '/interactions',
-  express.raw({ type: '*/*' }),                // 1. keep raw body
-  verifyKeyMiddleware(process.env.PUBLIC_KEY), // 2. verify signature
-  async (req, res) => {                        // 3. handle interaction
+  express.raw({ type: '*/*' }),                       // keep raw body, no json parsing
+  verifyKeyMiddleware(process.env.PUBLIC_KEY),        // signature check
+  async (req, res) => {
     try {
-      console.log('🔥 RAW BODY TYPE =>', typeof req.body, req.body);
-      let body;
-      if (Buffer.isBuffer(req.body)) {
-        body = JSON.parse(req.body.toString('utf8'));
-      } else {
-        body = req.body;
-      }
-      console.log('✅ PARSED BODY =>', body);
-
+      // body is already parsed by discord-interactions middleware
+      const body = req.body;
       const { type, data } = body;
 
       if (type === InteractionType.PING) {
@@ -61,16 +63,6 @@ app.post(
 
 app.use(express.json());
 
-// --- Discord client
-const client = new Client({
-  intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildMessages,
-    GatewayIntentBits.MessageContent,
-    GatewayIntentBits.GuildMessageReactions,
-  ],
-  partials: [Partials.Message, Partials.Channel, Partials.Reaction],
-});
 
 // polls in-memory: messageId => { topic, author, optionsCount, votes: { a:Set, b:Set, c:Set } }
 const polls = new Map();
