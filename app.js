@@ -9,12 +9,45 @@ import { Client, GatewayIntentBits, Partials, Events } from 'discord.js';
 import fs from 'fs';
 
 const app = express();
+const PORT = process.env.PORT || 3000;
+
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
-  app.use(express.json());
+  try {
+    const { type, data } = req.body;
+
+    if (type === InteractionType.PING) {
+      return res.send({ type: InteractionResponseType.PONG });
+    }
+
+    // Slash: /market
+    if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
+      // parse options
+      const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
+      const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
+
+      // show modal
+      return res.send({
+        type: InteractionResponseType.MODAL,
+        data: buildLabelsModal(topic, optionsCount),
+      });
+    }
+
+    // Modal submit
+    if (type === InteractionType.MODAL_SUBMIT && data && typeof data.custom_id === 'string' && data.custom_id.startsWith('market_labels|')) {
+      // handle modal
+      // respond via handler which will return a CHANNEL_MESSAGE_WITH_SOURCE
+      return handleLabelsSubmit(req, res);
+    }
+
+    return res.status(400).send();
+  } catch (err) {
+    console.error('interactions error', err);
+    // reply with generic failure to Discord to avoid "interaction failed" message
+    try { return res.status(500).send({ error: 'server error' }); } catch { return; }
+  }
 });
 
-
-const PORT = process.env.PORT || 3000;
+app.use(express.json());
 
 // --- Discord client
 const client = new Client({
@@ -237,44 +270,6 @@ async function updatePollMessage(message, poll) {
     console.error('updatePollMessage error', err);
   }
 }
-
-
-// --- interactions endpoint (slash + modal submit) ---
-app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
-  try {
-    const { type, data } = req.body;
-
-    if (type === InteractionType.PING) {
-      return res.send({ type: InteractionResponseType.PONG });
-    }
-
-    // Slash: /market
-    if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
-      // parse options
-      const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
-      const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
-
-      // show modal
-      return res.send({
-        type: InteractionResponseType.MODAL,
-        data: buildLabelsModal(topic, optionsCount),
-      });
-    }
-
-    // Modal submit
-    if (type === InteractionType.MODAL_SUBMIT && data && typeof data.custom_id === 'string' && data.custom_id.startsWith('market_labels|')) {
-      // handle modal
-      // respond via handler which will return a CHANNEL_MESSAGE_WITH_SOURCE
-      return handleLabelsSubmit(req, res);
-    }
-
-    return res.status(400).send();
-  } catch (err) {
-    console.error('interactions error', err);
-    // reply with generic failure to Discord to avoid "interaction failed" message
-    try { return res.status(500).send({ error: 'server error' }); } catch { return; }
-  }
-});
 
 async function handleLabelsSubmit(req, res) {
   try {
