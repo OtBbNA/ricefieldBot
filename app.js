@@ -17,7 +17,16 @@ app.post(
   verifyKeyMiddleware(process.env.PUBLIC_KEY), // 2. verify signature
   async (req, res) => {                        // 3. handle interaction
     try {
-      const body = JSON.parse(req.body.toString('utf8'));
+      let body;
+
+      if (Buffer.isBuffer(req.body)) {
+        body = JSON.parse(req.body.toString('utf8'));
+      } else if (typeof req.body === 'string') {
+        body = JSON.parse(req.body);
+      } else {
+        body = req.body;
+      }
+
       const { type, data } = body;
 
       if (type === InteractionType.PING) {
