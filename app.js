@@ -275,9 +275,9 @@ async function updatePollMessage(message, poll) {
   }
 }
 
-async function handleLabelsSubmit(req, res) {
+async function handleLabelsSubmit(body, res) {
   try {
-    const { data, member, user } = req.body;
+    const { data, member, user } = body;
     // custom_id encoded earlier: market_labels|{encodedTopic}|{optionsCount}
     const rawCustom = (data && data.custom_id) || '';
     const parts = rawCustom.split('|');
