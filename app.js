@@ -13,7 +13,8 @@ const PORT = process.env.PORT || 3000;
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
   try {
-    const { type, data } = req.body;
+    const body = JSON.parse(req.body.toString('utf8'));
+    const { type, data } = body;
 
     if (type === InteractionType.PING) {
       return res.send({ type: InteractionResponseType.PONG });
@@ -25,24 +26,19 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (re
       const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
       const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
 
-      // show modal
       return res.send({
         type: InteractionResponseType.MODAL,
         data: buildLabelsModal(topic, optionsCount),
       });
     }
 
-    // Modal submit
     if (type === InteractionType.MODAL_SUBMIT && data && typeof data.custom_id === 'string' && data.custom_id.startsWith('market_labels|')) {
-      // handle modal
-      // respond via handler which will return a CHANNEL_MESSAGE_WITH_SOURCE
-      return handleLabelsSubmit(req, res);
+      return handleLabelsSubmit(req, res, body);
     }
 
     return res.status(400).send();
   } catch (err) {
     console.error('interactions error', err);
-    // reply with generic failure to Discord to avoid "interaction failed" message
     try { return res.status(500).send({ error: 'server error' }); } catch { return; }
   }
 });
