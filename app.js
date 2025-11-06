@@ -9,7 +9,11 @@ import { Client, GatewayIntentBits, Partials, Events } from 'discord.js';
 import fs from 'fs';
 
 const app = express();
+app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
+...
+});
 app.use(express.json());
+
 const PORT = process.env.PORT || 3000;
 
 // --- Discord client
