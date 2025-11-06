@@ -17,15 +17,14 @@ app.post(
   verifyKeyMiddleware(process.env.PUBLIC_KEY), // 2. verify signature
   async (req, res) => {                        // 3. handle interaction
     try {
+      console.log('🔥 RAW BODY TYPE =>', typeof req.body, req.body);
       let body;
-
       if (Buffer.isBuffer(req.body)) {
         body = JSON.parse(req.body.toString('utf8'));
-      } else if (typeof req.body === 'string') {
-        body = JSON.parse(req.body);
       } else {
         body = req.body;
       }
+      console.log('✅ PARSED BODY =>', body);
 
       const { type, data } = body;
 
