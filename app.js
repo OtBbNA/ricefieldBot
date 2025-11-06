@@ -13,7 +13,10 @@ const PORT = process.env.PORT || 3000;
 
 app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (req, res) => {
   try {
-    const body = JSON.parse(req.body.toString('utf8'));
+    let body = req.body;
+    if (Buffer.isBuffer(body)) {
+      body = JSON.parse(body.toString('utf8'));
+    }
     const { type, data } = body;
 
     if (type === InteractionType.PING) {
@@ -37,9 +40,16 @@ app.post('/interactions', verifyKeyMiddleware(process.env.PUBLIC_KEY), async (re
     }
 
     return res.status(400).send();
-  } catch (err) {
+  }  catch (err) {
     console.error('interactions error', err);
-    try { return res.status(500).send({ error: 'server error' }); } catch { return; }
+    try {
+      return res.status(500).send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { content: 'Произошла ошибка.' },
+      });
+    } catch {
+      return;
+    }
   }
 });
 
