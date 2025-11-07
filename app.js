@@ -36,26 +36,26 @@ app.post(
       }
 
       if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
-        res.send({ type: 5 });
-        setTimeout(async () => {
-          try {
-            const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
-            const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
-            await fetch(`https://discord.com/api/v10/interactions/${body.id}/${body.token}/callback`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                type: InteractionResponseType.MODAL,
-                data: buildLabelsModal(topic, optionsCount),
-              }),
-            });
+        try {
+          // минимальная обработка
+          const topicOption = data.options.find(o => o.name === 'topic');
+          const optionsOption = data.options.find(o => o.name === 'options');
 
-            console.log('✅ Modal sent async');
-          } catch (err) {
-            console.error('❌ Error sending modal async:', err);
-          }
-        }, 100);
-        return;
+          const topic = topicOption?.value || 'Без темы';
+          const optionsCount = optionsOption?.value === 3 ? 3 : 2;
+
+          // Отправляем МГНОВЕННО, без async
+          return res.send({
+            type: InteractionResponseType.MODAL,
+            data: buildLabelsModal(topic.slice(0, 100), optionsCount), // ограничим topic
+          });
+        } catch (err) {
+          console.error('modal error', err);
+          return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: 'Ошибка при открытии модального окна.' },
+          });
+        }
       }
 
       // --- Modal submit
