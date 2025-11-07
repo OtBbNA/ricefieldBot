@@ -1,5 +1,6 @@
 import 'dotenv/config';
 import express from 'express';
+import fetch from 'node-fetch';
 import {
 InteractionType,
 InteractionResponseType,
@@ -20,32 +21,59 @@ const client = new Client({
   partials: [Partials.Message, Partials.Channel, Partials.Reaction],
 });
 
+import fetch from 'node-fetch';
+
 app.post(
   '/interactions',
-  express.raw({ type: '*/*' }),                       // keep raw body, no json parsing
-  verifyKeyMiddleware(process.env.PUBLIC_KEY),        // signature check
+  express.raw({ type: '*/*' }), // оставляем raw-body
+  verifyKeyMiddleware(process.env.PUBLIC_KEY),
   async (req, res) => {
     try {
-      // body is already parsed by discord-interactions middleware
       const body = req.body;
       const { type, data } = body;
 
+      // --- Ping check
       if (type === InteractionType.PING) {
         return res.send({ type: InteractionResponseType.PONG });
       }
 
-      // Slash: /market
+      // --- Slash command: /market
       if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
         const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
-        const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
+        const optionsCount =
+        data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
 
-        return res.send({
-          type: InteractionResponseType.MODAL,
+        // ⚡ Мгновенно подтверждаем Discord, чтобы избежать таймаута
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+
+        // ⚙️ Потом отдельно (асинхронно) открываем модалку
+        const interactionId = body.id;
+        const token = body.token;
+        const modalPayload = {
+          type: 9, // MODAL
           data: buildLabelsModal(topic, optionsCount),
-        });
+        };
+
+        // Discord follow-up
+        setTimeout(async () => {
+          try {
+            await fetch(
+              `https://discord.com/api/v10/interactions/${interactionId}/${token}/callback`,
+              {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(modalPayload),
+              }
+            );
+          } catch (err) {
+            console.error('modal follow-up error', err);
+          }
+        }, 100);
+
+        return;
       }
 
-      // Modal submit
+      // --- Modal submit
       if (type === InteractionType.MODAL_SUBMIT && data?.custom_id?.startsWith('market_labels|')) {
         return handleLabelsSubmit(body, res);
       }
