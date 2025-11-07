@@ -24,51 +24,37 @@ import fetch from 'node-fetch';
 
 app.post(
   '/interactions',
-  express.raw({ type: '*/*' }), // оставляем raw-body
+  express.raw({ type: '*/*' });
   verifyKeyMiddleware(process.env.PUBLIC_KEY),
   async (req, res) => {
     try {
       const body = req.body;
       const { type, data } = body;
 
-      // --- Ping check
       if (type === InteractionType.PING) {
         return res.send({ type: InteractionResponseType.PONG });
       }
 
-      // --- Slash command: /market
       if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
-        const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
-        const optionsCount =
-        data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
-
-        // ⚡ Мгновенно подтверждаем Discord, чтобы избежать таймаута
-        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
-
-        // ⚙️ Потом отдельно (асинхронно) открываем модалку
-        const interactionId = body.id;
-        const token = body.token;
-        const modalPayload = {
-          type: 9, // MODAL
-          data: buildLabelsModal(topic, optionsCount),
-        };
-
-        // Discord follow-up
+        res.send({ type: 5 });
         setTimeout(async () => {
           try {
-            await fetch(
-              `https://discord.com/api/v10/interactions/${interactionId}/${token}/callback`,
-              {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(modalPayload),
-              }
-            );
+            const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
+            const optionsCount = data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
+            await fetch(`https://discord.com/api/v10/interactions/${body.id}/${body.token}/callback`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                type: InteractionResponseType.MODAL,
+                data: buildLabelsModal(topic, optionsCount),
+              }),
+            });
+
+            console.log('✅ Modal sent async');
           } catch (err) {
-            console.error('modal follow-up error', err);
+            console.error('❌ Error sending modal async:', err);
           }
         }, 100);
-
         return;
       }
 
@@ -90,8 +76,6 @@ app.post(
 
 app.use(express.json());
 
-
-// polls in-memory: messageId => { topic, author, optionsCount, votes: { a:Set, b:Set, c:Set } }
 const polls = new Map();
 const ignoreRemovals = new Set();
 
