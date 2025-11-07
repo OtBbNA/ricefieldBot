@@ -577,4 +577,12 @@ client.once(Events.ClientReady, async () => {
   app.listen(PORT, () => console.log(`🌐 Express listening on port ${PORT}`));
 });
 
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || `https://${process.env.RENDER_PROJECT_SLUG}.onrender.com`;
+
+setInterval(() => {
+fetch(SELF_URL)
+  .then(() => console.log('💤 Self-ping OK'))
+  .catch(() => console.log('⚠️ Self-ping failed'));
+}, 60 * 1000);
+
 client.login(process.env.DISCORD_TOKEN);
