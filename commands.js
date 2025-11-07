@@ -17,7 +17,6 @@ async function createCommand() {
         description: 'Тема опроса',
         type: 3, // STRING
         required: true,
-        max_length: 90
       },
       {
         name: 'options',

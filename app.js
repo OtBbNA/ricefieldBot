@@ -77,6 +77,7 @@ app.post(
 app.use(express.json());
 
 const polls = new Map();
+const pendingTopics = new Map();
 const ignoreRemovals = new Set();
 
 // ANSI helpers
@@ -95,26 +96,26 @@ function safeEmojiName(e) {
 // --- Build modal JSON for Discord (components) ---
 // We'll encode topic via encodeURIComponent and pack into custom_id
 function buildLabelsModal(topic, optionsCount) {
-  // custom id: market_labels|{encodedTopic}|{optionsCount}
-  const encoded = encodeURIComponent(topic).replace(/\|/g, '%7C');
-  const customId = `market_labels|${encoded}|${optionsCount}`;
+  const token = (Date.now().toString(36) + Math.random().toString(36).slice(2,8)).slice(0,8);
+  pendingTopics.set(token, topic);
+
+  setTimeout(() => pendingTopics.delete(token), 5 * 60 * 1000);
+
+  const customId = `market_labels|${token}|${optionsCount}`;
 
   const fields = [];
 
-  // label1 -> 🟢
   fields.push({
     type: 1,
     components: [
       {
         type: 4,
         custom_id: 'label1',
-        style: 1, // short text
+        style: 1,
         label: '🟢 —',
         min_length: 0,
         max_length: 100,
         required: false,
-        // initial value doesn't work universally in discord modal via interactions, but it's harmless
-        // some clients ignore `value` - keep it optional; the default will be applied server-side if empty
         value: 'да',
       },
     ],
@@ -153,7 +154,6 @@ function buildLabelsModal(topic, optionsCount) {
       ],
     });
   } else {
-    // optionsCount === 2 -> label2 is red
     fields.push({
       type: 1,
       components: [
@@ -289,16 +289,22 @@ async function updatePollMessage(message, poll) {
 async function handleLabelsSubmit(body, res) {
   try {
     const { data, member, user } = body;
-    // custom_id encoded earlier: market_labels|{encodedTopic}|{optionsCount}
     const rawCustom = (data && data.custom_id) || '';
     const parts = rawCustom.split('|');
-    // second part is encoded topic
-    const encodedTopic = parts[1] || '';
+    const token = parts[1] || '';
     const optionsCount = parseInt(parts[2], 10) === 3 ? 3 : 2;
     let topic = 'Без темы';
-    try {
-      topic = decodeURIComponent(encodedTopic);
-    } catch { topic = encodedTopic || 'Без темы'; }
+
+    if (token && pendingTopics.has(token)) {
+      topic = pendingTopics.get(token);
+      pendingTopics.delete(token);
+    } else {
+      try {
+        topic = decodeURIComponent(parts[1] || '') || 'Без темы';
+      } catch {
+        topic = parts[1] || 'Без темы';
+      }
+    }
 
     const author = member?.user?.username || user?.username || 'Неизвестный пользователь';
 
