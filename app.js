@@ -24,7 +24,7 @@ import fetch from 'node-fetch';
 
 app.post(
   '/interactions',
-  express.raw({ type: '*/*' });
+  express.raw({ type: '*/*' }),
   verifyKeyMiddleware(process.env.PUBLIC_KEY),
   async (req, res) => {
     try {
