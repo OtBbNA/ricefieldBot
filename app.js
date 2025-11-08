@@ -451,7 +451,23 @@ client.on('messageCreate', async (message) => {
       // ignore
     }
 
-    // normalize visual
+    try {
+      const allowed = poll.optionsCount === 3 ? ['🟢', '🔵', '🔴'] : ['🟢', '🔴'];
+      const userReactions = message.reactions.cache.filter(r => allowed.includes(r.emoji.name));
+
+      for (const reaction of userReactions.values()) {
+        if (reaction.users.cache.has(user.id) && !(
+        (reaction.emoji.name === '🟢' && poll.votes.a.has(user.id)) ||
+        (reaction.emoji.name === '🔵' && poll.votes.b.has(user.id)) ||
+        (reaction.emoji.name === '🔴' && poll.votes.c.has(user.id))
+        )) {
+          ignoreRemovals.add(`${message.id}_${user.id}`);
+          await reaction.users.remove(user.id).catch(() => {});
+        }
+      }
+    } catch (err) {
+      console.warn('reaction cleanup failed', err);
+    }
     await updatePollMessage(message, polls.get(message.id));
   } catch (err) {
     console.error('messageCreate error', err);
@@ -540,6 +556,23 @@ client.on('messageReactionAdd', async (reaction, user) => {
   }
 
   await resyncPollFromMessage(message, poll);
+  try {
+    const allowed = poll.optionsCount === 3 ? ['🟢', '🔵', '🔴'] : ['🟢', '🔴'];
+    const userReactions = message.reactions.cache.filter(r => allowed.includes(r.emoji.name));
+
+    for (const reaction of userReactions.values()) {
+      if (reaction.users.cache.has(user.id) && !(
+      (reaction.emoji.name === '🟢' && poll.votes.a.has(user.id)) ||
+      (reaction.emoji.name === '🔵' && poll.votes.b.has(user.id)) ||
+      (reaction.emoji.name === '🔴' && poll.votes.c.has(user.id))
+      )) {
+        ignoreRemovals.add(`${message.id}_${user.id}`);
+        await reaction.users.remove(user.id).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.warn('reaction cleanup failed', err);
+  }
   await updatePollMessage(message, poll);
 });
 
@@ -568,6 +601,23 @@ client.on('messageReactionRemove', async (reaction, user) => {
   poll.votes.c.delete(user.id);
 
   await resyncPollFromMessage(message, poll);
+  try {
+    const allowed = poll.optionsCount === 3 ? ['🟢', '🔵', '🔴'] : ['🟢', '🔴'];
+    const userReactions = message.reactions.cache.filter(r => allowed.includes(r.emoji.name));
+
+    for (const reaction of userReactions.values()) {
+      if (reaction.users.cache.has(user.id) && !(
+      (reaction.emoji.name === '🟢' && poll.votes.a.has(user.id)) ||
+      (reaction.emoji.name === '🔵' && poll.votes.b.has(user.id)) ||
+      (reaction.emoji.name === '🔴' && poll.votes.c.has(user.id))
+      )) {
+        ignoreRemovals.add(`${message.id}_${user.id}`);
+        await reaction.users.remove(user.id).catch(() => {});
+      }
+    }
+  } catch (err) {
+    console.warn('reaction cleanup failed', err);
+  }
   await updatePollMessage(message, poll);
 });
 
