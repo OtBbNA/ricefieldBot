@@ -220,6 +220,10 @@ async function resyncPollFromMessage(message, poll) {
 
 async function updatePollMessage(message, poll) {
   try {
+    if (poll._updating) return;
+    poll._updating = true;
+    setTimeout(() => poll._updating = false, 500);
+
     const [headerPart, ...rest] = message.content.split('```ansi');
 
     // extract labels (everything after final ```), one-line forced
