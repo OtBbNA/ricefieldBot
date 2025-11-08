@@ -204,6 +204,20 @@ function buildAnsiBarString(parts, totalVotes) {
   return `${top}\n${middle}\n${bot}`;
 }
 
+async function resyncPollFromMessage(message, poll) {
+  try {
+    const upUsers = await message.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
+    const midUsers = await message.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
+    const downUsers = await message.reactions.cache.get('🔴')?.users.fetch().catch(()=>null);
+
+    poll.votes.a = new Set(upUsers ? upUsers.map(u => u.id).filter(id => id !== message.client.user.id) : []);
+    poll.votes.b = new Set(midUsers ? midUsers.map(u => u.id).filter(id => id !== message.client.user.id) : []);
+    poll.votes.c = new Set(downUsers ? downUsers.map(u => u.id).filter(id => id !== message.client.user.id) : []);
+  } catch (err) {
+    console.warn('resyncPollFromMessage failed', err);
+  }
+}
+
 async function updatePollMessage(message, poll) {
   try {
     const [headerPart, ...rest] = message.content.split('```ansi');
@@ -521,6 +535,7 @@ client.on('messageReactionAdd', async (reaction, user) => {
     b.delete(user.id);
   }
 
+  await resyncPollFromMessage(message, poll);
   await updatePollMessage(message, poll);
 });
 
@@ -548,6 +563,7 @@ client.on('messageReactionRemove', async (reaction, user) => {
   poll.votes.b.delete(user.id);
   poll.votes.c.delete(user.id);
 
+  await resyncPollFromMessage(message, poll);
   await updatePollMessage(message, poll);
 });
 
