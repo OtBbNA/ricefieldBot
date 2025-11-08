@@ -47,7 +47,7 @@ app.post(
           // Отправляем МГНОВЕННО, без async
           return res.send({
             type: InteractionResponseType.MODAL,
-            data: buildLabelsModal(topic.slice(0, 100), optionsCount), // ограничим topic
+            data: buildLabelsModal(topic.slice(0, 300), optionsCount), // ограничим topic
           });
         } catch (err) {
           console.error('modal error', err);
