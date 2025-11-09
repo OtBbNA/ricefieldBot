@@ -58,7 +58,6 @@ app.post(
                 }
             }
 
-            // --- Slash: /rate
             if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
                 try {
                     const messageLink = data.options.find(o => o.name === 'message')?.value;
@@ -69,7 +68,6 @@ app.post(
                         });
                     }
 
-                    // Паттерн: https://discord.com/channels/<guild>/<channel>/<message>
                     const match = messageLink.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
                     if (!match) {
                         return res.send({
@@ -80,15 +78,15 @@ app.post(
 
                     const [, guildId, channelId, messageId] = match;
 
-                    // Мгновенный ответ (чтобы Discord не показал "не ответило вовремя")
-                    res.send({type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+                    res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
 
-                    // Асинхронно ставим реакции
                     setTimeout(async () => {
                         try {
                             const channel = await client.channels.fetch(channelId);
-                            if (!channel || !channel.isTextBased()) return;
+                            if (!channel?.isTextBased()) return;
+
                             const msg = await channel.messages.fetch(messageId);
+                            if (!msg) return;
 
                             const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
                             for (const emoji of emojis) {
@@ -96,20 +94,27 @@ app.post(
                             }
 
                             console.log(`✅ Added rating reactions to message ${messageId}`);
+
+                            // Удаляем "служебное" сообщение Discord (оно не будет видно пользователю)
+                            await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
+                                method: 'DELETE',
+                            });
+
                         } catch (err) {
-                            console.error('rate command error:', err);
+                            console.error('❌ rate command async error:', err);
                         }
                     }, 200);
 
                     return;
                 } catch (err) {
-                    console.error('rate command error', err);
+                    console.error('❌ rate command error', err);
                     return res.send({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
                         data: { content: 'Произошла ошибка при добавлении реакций.' },
                     });
                 }
             }
+
 
 
             // --- Modal submit
