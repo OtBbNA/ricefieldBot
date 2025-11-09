@@ -81,10 +81,7 @@ app.post(
                     const [, guildId, channelId, messageId] = match;
 
                     // Мгновенный ответ (чтобы Discord не показал "не ответило вовремя")
-                    res.send({
-                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: '⏳ Добавляю реакции...' },
-                    });
+                    res.send({type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
 
                     // Асинхронно ставим реакции
                     setTimeout(async () => {
