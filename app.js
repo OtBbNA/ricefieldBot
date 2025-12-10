@@ -62,6 +62,7 @@ app.post(
                 }
             }
 
+
             if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
                 try {
                     const messageLink = data.options.find(o => o.name === 'message')?.value;
@@ -82,7 +83,10 @@ app.post(
 
                     const [, guildId, channelId, messageId] = match;
 
-                    res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
+                    // ❗ ПРАВИЛЬНЫЙ ДЕФЕР
+                    res.send({
+                        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+                    });
 
                     setTimeout(async () => {
                         try {
@@ -99,10 +103,10 @@ app.post(
 
                             console.log(`✅ Added rating reactions to message ${messageId}`);
 
-                            // Удаляем "служебное" сообщение Discord (оно не будет видно пользователю)
-//                            await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
-//                                method: 'DELETE',
-//                            });
+                            // УДАЛЯЕМ оригинальный deferred reply (чтобы ничего не было видно)
+                            await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
+                                method: 'DELETE',
+                            });
 
                         } catch (err) {
                             console.error('❌ rate command async error:', err);
@@ -118,7 +122,6 @@ app.post(
                     });
                 }
             }
-
 
 
             // --- Modal submit
