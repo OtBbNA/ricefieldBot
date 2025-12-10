@@ -26,6 +26,12 @@ const client = new Client({
 
 import fetch from 'node-fetch';
 
+
+app.use((req, res, next) => {
+    if (req.path === '/interactions') return next();
+    express.json()(req, res, next);
+});
+
 app.post(
     '/interactions',
     express.raw({ type: '*/*' }),
@@ -153,8 +159,6 @@ app.post(
         }
     }
 );
-
-app.use(express.json());
 
 const polls = new Map();
 const pendingTopics = new Map();
