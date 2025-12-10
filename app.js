@@ -66,6 +66,7 @@ app.post(
             if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
                 try {
                     const messageLink = data.options.find(o => o.name === 'message')?.value;
+
                     if (!messageLink) {
                         return res.send({
                             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
@@ -77,17 +78,18 @@ app.post(
                     if (!match) {
                         return res.send({
                             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                            data: { content: '❌ Неверный формат ссылки на сообщение.' },
+                            data: { content: '❌ Неверный формат ссылки.' },
                         });
                     }
 
                     const [, guildId, channelId, messageId] = match;
 
-                    // ❗ ПРАВИЛЬНЫЙ ДЕФЕР
+                    // --- 1) мгновенно отвечаем, чтобы Discord НЕ висел ---
                     res.send({
-                        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+                        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
                     });
 
+                    // --- 2) ставим реакции ---
                     setTimeout(async () => {
                         try {
                             const channel = await client.channels.fetch(channelId);
@@ -103,25 +105,37 @@ app.post(
 
                             console.log(`✅ Added rating reactions to message ${messageId}`);
 
-                            // УДАЛЯЕМ оригинальный deferred reply (чтобы ничего не было видно)
-                            await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
-                                method: 'DELETE',
+                            // --- 3) заменяем deferred на пустое follow-up и сразу удаляем ---
+                            const webhookUrl = `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}`;
+
+                            // создаём "пустое" сообщение
+                            const follow = await fetch(`${webhookUrl}`, {
+                                method: 'POST',
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ content: ' ' }) // должен быть не пустой
+                            }).then(r => r.json());
+
+                            // удаляем его
+                            await fetch(`${webhookUrl}/messages/${follow.id}`, {
+                                method: 'DELETE'
                             });
 
                         } catch (err) {
-                            console.error('❌ rate command async error:', err);
+                            console.error('❌ rate async error:', err);
                         }
-                    }, 200);
+                    }, 150);
 
                     return;
+
                 } catch (err) {
                     console.error('❌ rate command error', err);
                     return res.send({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: 'Произошла ошибка при добавлении реакций.' },
+                        data: { content: 'Ошибка при добавлении реакций.' },
                     });
                 }
             }
+
 
 
             // --- Modal submit
