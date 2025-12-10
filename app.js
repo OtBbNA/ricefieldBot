@@ -759,6 +759,8 @@ fetch(SELF_URL + '/ping')
 
 console.log("Starting bot with token:", process.env.DISCORD_TOKEN ? "OK" : "MISSING");
 app.listen(PORT, () => console.log(`🌐 Express listening on port ${PORT}`));
-console.log("DISCORD TOKEN LENGTH:", process.env.DISCORD_TOKEN?.length);
-console.log("TOKEN START:", process.env.DISCORD_TOKEN?.slice(0, 10));
+client.on("error", err => console.error("DISCORD.JS ERROR:", err));
+client.on("debug", msg => console.log("DEBUG:", msg));
+client.on("warn", msg => console.warn("WARN:", msg));
+
 client.login(process.env.DISCORD_TOKEN);
