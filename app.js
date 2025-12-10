@@ -8,6 +8,10 @@ verifyKeyMiddleware,
 import { Client, GatewayIntentBits, Partials, Events } from 'discord.js';
 import fs from 'fs';
 
+process.on("unhandledRejection", err => console.error("UNHANDLED:", err));
+process.on("uncaughtException", err => console.error("UNCAUGHT:", err));
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 const client = new Client({
@@ -720,7 +724,6 @@ client.once(Events.ClientReady, async () => {
     }
 
     console.log(`🗂 Active polls loaded: ${polls.size}`);
-    app.listen(PORT, () => console.log(`🌐 Express listening on port ${PORT}`));
 });
 
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || `https://${process.env.RENDER_PROJECT_SLUG}.onrender.com`;
@@ -732,4 +735,7 @@ fetch(SELF_URL + '/ping')
     .catch(() => console.log('⚠️ Self-ping failed'));
 }, 60 * 1000);
 
+
+console.log("Starting bot with token:", process.env.DISCORD_TOKEN ? "OK" : "MISSING");
+app.listen(PORT, () => console.log(`🌐 Express listening on port ${PORT}`));
 client.login(process.env.DISCORD_TOKEN);
