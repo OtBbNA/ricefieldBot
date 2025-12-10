@@ -78,7 +78,7 @@ app.post(
 
                     const [, guildId, channelId, messageId] = match;
 
-                    res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+                    res.send({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
 
                     setTimeout(async () => {
                         try {
@@ -96,9 +96,9 @@ app.post(
                             console.log(`✅ Added rating reactions to message ${messageId}`);
 
                             // Удаляем "служебное" сообщение Discord (оно не будет видно пользователю)
-                            await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
-                                method: 'DELETE',
-                            });
+//                            await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`, {
+//                                method: 'DELETE',
+//                            });
 
                         } catch (err) {
                             console.error('❌ rate command async error:', err);
@@ -724,9 +724,10 @@ client.once(Events.ClientReady, async () => {
 });
 
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || `https://${process.env.RENDER_PROJECT_SLUG}.onrender.com`;
+app.get('/ping', (req, res) => res.send('ok'));
 
 setInterval(() => {
-fetch(SELF_URL)
+fetch(SELF_URL + '/ping')
     .then(() => console.log('💤 Self-ping OK'))
     .catch(() => console.log('⚠️ Self-ping failed'));
 }, 60 * 1000);
