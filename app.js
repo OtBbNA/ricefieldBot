@@ -710,39 +710,39 @@ client.once(Events.ClientReady, async () => {
     console.log(`✅ Logged in as ${client.user.tag}`);
     console.log('🔍 Scanning channels for existing polls...');
 
-    for (const [, channel] of client.channels.cache) {
-        if (!channel.isTextBased?.()) continue;
-        try {
-            const messages = await channel.messages.fetch({ limit: 50 });
-            const botPolls = [...messages.values()].filter(m => m.author?.bot && m.content?.startsWith('📊'));
-            botPolls.sort((a,b)=>a.createdTimestamp - b.createdTimestamp);
-
-            for (const msg of botPolls) {
-                const lines = msg.content.split('\n');
-                const topic = (lines[1]?.replace(/^#\s*/,'') || 'Без темы').trim();
-                const authorMatch = lines[2]?.match(/by:\s*(.*)$/i);
-                const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
-
-                const markerMatch = msg.content.match(/\u200Boptions:(\d)\u200B/);
-                const optionsCount = markerMatch ? (parseInt(markerMatch[1],10)===3 ? 3 : 2) : (msg.reactions.cache.has('🔵') ? 3 : 2);
-
-                const upUsers = await msg.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
-                const midUsers = await msg.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
-                const downUsers = await msg.reactions.cache.get('🔴')?.users.fetch().catch(()=>null);
-
-                const upSet = new Set(upUsers ? upUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
-                const midSet = new Set(midUsers ? midUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
-                const downSet = new Set(downUsers ? downUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
-
-                polls.set(msg.id, { topic, author, optionsCount, votes: { a: upSet, b: midSet, c: downSet } });
-
-                // normalize display (ensures header formatting + keeps labels if present)
-                await updatePollMessage(msg, polls.get(msg.id));
-            }
-        } catch (err) {
-            // ignore channels we can't access
-        }
-    }
+//    for (const [, channel] of client.channels.cache) {
+//        if (!channel.isTextBased?.()) continue;
+//        try {
+//            const messages = await channel.messages.fetch({ limit: 50 });
+//            const botPolls = [...messages.values()].filter(m => m.author?.bot && m.content?.startsWith('📊'));
+//            botPolls.sort((a,b)=>a.createdTimestamp - b.createdTimestamp);
+//
+//            for (const msg of botPolls) {
+//                const lines = msg.content.split('\n');
+//                const topic = (lines[1]?.replace(/^#\s*/,'') || 'Без темы').trim();
+//                const authorMatch = lines[2]?.match(/by:\s*(.*)$/i);
+//                const author = authorMatch ? authorMatch[1].trim() : 'Неизвестный пользователь';
+//
+//                const markerMatch = msg.content.match(/\u200Boptions:(\d)\u200B/);
+//                const optionsCount = markerMatch ? (parseInt(markerMatch[1],10)===3 ? 3 : 2) : (msg.reactions.cache.has('🔵') ? 3 : 2);
+//
+//                const upUsers = await msg.reactions.cache.get('🟢')?.users.fetch().catch(()=>null);
+//                const midUsers = await msg.reactions.cache.get('🔵')?.users.fetch().catch(()=>null);
+//                const downUsers = await msg.reactions.cache.get('🔴')?.users.fetch().catch(()=>null);
+//
+//                const upSet = new Set(upUsers ? upUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
+//                const midSet = new Set(midUsers ? midUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
+//                const downSet = new Set(downUsers ? downUsers.map(u=>u.id).filter(id=>id!==client.user.id) : []);
+//
+//                polls.set(msg.id, { topic, author, optionsCount, votes: { a: upSet, b: midSet, c: downSet } });
+//
+//                // normalize display (ensures header formatting + keeps labels if present)
+//                await updatePollMessage(msg, polls.get(msg.id));
+//            }
+//        } catch (err) {
+//            // ignore channels we can't access
+//        }
+//    }
 
     console.log(`🗂 Active polls loaded: ${polls.size}`);
 });
