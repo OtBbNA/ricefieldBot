@@ -763,4 +763,12 @@ client.on("error", err => console.error("DISCORD.JS ERROR:", err));
 client.on("debug", msg => console.log("DEBUG:", msg));
 client.on("warn", msg => console.warn("WARN:", msg));
 
+client.on("shardError", err => console.error("❌ SHARD ERROR:", err));
+client.on("shardDisconnect", (event, id) => console.error(`❌ SHARD DISCONNECT ${id}:`, event));
+client.on("shardReconnecting", id => console.warn(`♻️ SHARD RECONNECTING ${id}`));
+client.on("shardResume", id => console.log(`🔄 SHARD RESUMED ${id}`));
+import { setTimeout } from "timers";
+
+// Патч: отключить IPv6
+process.env.NODE_OPTIONS = "--dns-result-order=ipv4first";
 client.login(process.env.DISCORD_TOKEN);
