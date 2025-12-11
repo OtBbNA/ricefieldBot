@@ -70,6 +70,7 @@ app.post(
 
 
             // ====== /rate ======
+            // ====== /rate ======
             if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
                 try {
                     const messageLink = data.options.find(o => o.name === 'message')?.value;
@@ -81,7 +82,6 @@ app.post(
                         });
                     }
 
-                    // https://discord.com/channels/<guild>/<channel>/<message>
                     const match = messageLink.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
                     if (!match) {
                         return res.send({
@@ -92,12 +92,10 @@ app.post(
 
                     const [, guildId, channelId, messageId] = match;
 
-                    // --- 1) Discord должен получить ответ < 2 секунд
                     res.send({
                         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
                     });
 
-                    // --- 2) Асинхронная работа после ответа ---
                     setTimeout(async () => {
                         try {
                             const channel = await client.channels.fetch(channelId);
@@ -117,17 +115,11 @@ app.post(
 
                             console.log(`✅ Added rating reactions to ${messageId}`);
 
-                            // --- 3) FINISH — убираем "думает..."
-                            const webhookUrl =
+                            // --- 🎯 Удаляем оригинальное сообщение ответа бота ---
+                            const deleteUrl =
                             `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
-                            await fetch(webhookUrl, {
-                                method: "PATCH",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                    content: ""   // пустое сообщение — Discord прячет индикатор
-                                })
-                            });
+                            await fetch(deleteUrl, { method: "DELETE" });
 
                         } catch (err) {
                             console.error("rate async error:", err);
