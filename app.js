@@ -69,6 +69,7 @@ app.post(
             }
 
 
+            // ====== /rate ======
             if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
                 try {
                     const messageLink = data.options.find(o => o.name === 'message')?.value;
@@ -80,6 +81,7 @@ app.post(
                         });
                     }
 
+                    // https://discord.com/channels/<guild>/<channel>/<message>
                     const match = messageLink.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
                     if (!match) {
                         return res.send({
@@ -90,12 +92,12 @@ app.post(
 
                     const [, guildId, channelId, messageId] = match;
 
-                    // --- 1) мгновенно отвечаем, чтобы Discord НЕ висел ---
+                    // --- 1) Discord должен получить ответ < 2 секунд
                     res.send({
                         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
                     });
 
-                    // --- 2) ставим реакции ---
+                    // --- 2) Асинхронная работа после ответа ---
                     setTimeout(async () => {
                         try {
                             const channel = await client.channels.fetch(channelId);
@@ -104,44 +106,44 @@ app.post(
                             const msg = await channel.messages.fetch(messageId);
                             if (!msg) return;
 
-                            const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+                            const emojis = [
+                                '1️⃣','2️⃣','3️⃣','4️⃣','5️⃣',
+                                '6️⃣','7️⃣','8️⃣','9️⃣','🔟'
+                            ];
+
                             for (const emoji of emojis) {
                                 await msg.react(emoji);
                             }
 
-                            console.log(`✅ Added rating reactions to message ${messageId}`);
+                            console.log(`✅ Added rating reactions to ${messageId}`);
 
-                            // --- 3) заменяем deferred на пустое follow-up и сразу удаляем ---
-                            const webhookUrl = `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}`;
+                            // --- 3) FINISH — убираем "думает..."
+                            const webhookUrl =
+                            `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
-                            // создаём "пустое" сообщение
-                            const follow = await fetch(`${webhookUrl}`, {
-                                method: 'POST',
+                            await fetch(webhookUrl, {
+                                method: "PATCH",
                                 headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ content: ' ' }) // должен быть не пустой
-                            }).then(r => r.json());
-
-                            // удаляем его
-                            await fetch(`${webhookUrl}/messages/${follow.id}`, {
-                                method: 'DELETE'
+                                body: JSON.stringify({
+                                    content: ""   // пустое сообщение — Discord прячет индикатор
+                                })
                             });
 
                         } catch (err) {
-                            console.error('❌ rate async error:', err);
+                            console.error("rate async error:", err);
                         }
                     }, 150);
 
                     return;
 
                 } catch (err) {
-                    console.error('❌ rate command error', err);
+                    console.error("rate command error", err);
                     return res.send({
                         type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                        data: { content: 'Ошибка при добавлении реакций.' },
+                        data: { content: 'Произошла ошибка при добавлении реакций.' },
                     });
                 }
             }
-
 
 
             // --- Modal submit
