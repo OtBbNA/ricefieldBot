@@ -33,85 +33,30 @@ app.use((req, res, next) => {
 });
 
 app.post(
-'/interactions',
-express.raw({ type: '*/*' }),
-verifyKeyMiddleware(process.env.PUBLIC_KEY),
-async (req, res) => {
-    try {
-
-        let body;
-
+    '/interactions',
+    express.raw({ type: '*/*' }),
+    verifyKeyMiddleware(process.env.PUBLIC_KEY),
+    async (req, res) => {
         try {
-            body = Buffer.isBuffer(rawBody)
-            ? JSON.parse(rawBody.toString('utf8'))
-            : rawBody;
-        } catch (e) {
-            console.error('❌ BODY PARSE FAILED');
-            return res.sendStatus(400);
-        }
+            const body = req.body; // <-- УЖЕ ГОТОВЫЙ ОБЪЕКТ
 
-        const { type, data } = body;
+            if (!body || typeof body !== 'object') {
+                console.error('❌ INVALID BODY TYPE:', typeof body);
+                return res.sendStatus(400);
+            }
 
-        if (type === InteractionType.PING) {
-            return res.send({ type: InteractionResponseType.PONG });
-        }
+            const { type, data } = body;
 
-        if (type === InteractionType.APPLICATION_COMMAND && data.name === 'film') {
-            console.log('🎬 /film called');
+            if (type === InteractionType.PING) {
+                return res.send({ type: InteractionResponseType.PONG });
+            }
 
-            const url = data.options.find(o => o.name === 'url')?.value;
-            console.log('🔗 URL:', url);
-
-            res.send({
-                type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { flags: 64 },
-            });
-
-            setTimeout(async () => {
-                console.log('⏳ async start');
-
-                try {
-                    console.log('🌍 fetching html...');
-                    const html = await fetch(url, {
-                        headers: {
-                            'User-Agent': 'Mozilla/5.0',
-                            'Accept-Language': 'ru-RU,ru;q=0.9',
-                        },
-                    }).then(r => r.text());
-
-                    console.log('✅ html length:', html.length);
-
-                    const cheerio = await import('cheerio');
-                    const $ = cheerio.load(html);
-
-                    const title = $('h1').first().text().trim();
-                    console.log('🎞 title:', title || 'EMPTY');
-
-                    const webhookUrl =
-                    `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}`;
-
-                    console.log('🔑 webhook url ready');
-
-                    const r = await fetch(webhookUrl, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            flags: 64,
-                            content: `🎬 **${title || 'NO TITLE'}**`,
-                        }),
-                    });
-
-                    console.log('📤 follow-up status:', r.status);
-
-                } catch (err) {
-                    console.error('❌ FILM ERROR:', err);
-                }
-            }, 100);
-
-            return;
+            // дальше твоя логика
+        } catch (err) {
+            console.error('❌ interactions error:', err);
+            return res.sendStatus(500);
         }
     }
-}
 );
 
 
