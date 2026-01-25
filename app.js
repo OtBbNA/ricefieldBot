@@ -118,58 +118,151 @@ const row = (id, label, value) => ({
 
 // ================== MODAL SUBMIT ==================
 
-function handleLabelsSubmit(body, res) {
-  const [, token, count] = body.data.custom_id.split('|');
-  const optionsCount = count === '3' ? 3 : 2;
+async function handleLabelsSubmit(body, res) {
+    const [, token, count] = body.data.custom_id.split('|');
+    const optionsCount = count === '3' ? 3 : 2;
 
-  const topic = pendingTopics.get(token) || 'Без темы';
-  pendingTopics.delete(token);
+    const topic = pendingTopics.get(token) || 'Без темы';
+    pendingTopics.delete(token);
 
-  const values = body.data.components.map(r =>
-    r.components[0].value || 'N/A'
-  );
+    const author =
+    body.member?.user?.username ||
+    body.user?.username ||
+    'Unknown';
 
-  const labels =
+    const values = body.data.components.map(r =>
+    r.components[0].value?.trim() || 'N/A'
+    );
+
+    const labels =
     optionsCount === 3
-      ? `-# 🟢 — ${values[0]}, 🔵 — ${values[1]}, 🔴 — ${values[2]}`
-      : `-# 🟢 — ${values[0]}, 🔴 — ${values[1]}`;
+    ? `-# 🟢 — ${values[0]}, 🔵 — ${values[1]}, 🔴 — ${values[2]}`
+    : `-# 🟢 — ${values[0]}, 🔴 — ${values[1]}`;
 
-  const content =
-    `📊\n# ${topic}\n\n` +
-    '```ansi\n' +
-emptyBar() + '\n' +
-sep() + '\n' +
-emptyFooter(optionsCount) + '\n' +
-sep() + '\n```' +
-'\n' + labels;
+    const content =
+    `📊\n# ${topic}\n-# by: ${author}\n\n` +
+    buildPollAnsi(optionsCount, { a: 0, b: 0, c: 0 }) +
+    '\n' + labels;
 
-return res.send({
-type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-data: { content },
-});
+    return res.send({
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: { content },
+    });
 }
 
-// ================== BAR ==================
-const sep = () =>
-esc('1;30') + '━'.repeat(SEGMENTS + 2) + rst;
+const SEGMENTS = 66;
 
-const emptyBar = () =>
-esc('1;30') +
-'┏' + '━'.repeat(SEGMENTS) + '┓\n' +
-'┃' + '▉'.repeat(SEGMENTS) + '┃\n' +
-'┗' + '━'.repeat(SEGMENTS) + '┛' +
-rst;
+const COLORS = {
+    gray: '1;30',
+    green: '1;32',
+    blue: '1;34',
+    red: '1;31',
+};
 
-const emptyFooter = c =>
-c === 3
-? `${esc('1;32')} ⬤ 0${rst} | ${esc('1;34')} ⬤ 0${rst} | ${esc('1;31')} ⬤ 0${rst}`
-: `${esc('1;32')} ⬤ 0${rst} | ${esc('1;31')} ⬤ 0${rst}`;
+function buildPollAnsi(optionsCount, votes) {
+    const total = votes.a + votes.b + votes.c || 1;
+
+    const aSeg = Math.round((votes.a / total) * SEGMENTS);
+    const bSeg = optionsCount === 3
+    ? Math.round((votes.b / total) * SEGMENTS)
+    : 0;
+    const cSeg = SEGMENTS - aSeg - bSeg;
+
+    let bar =
+    esc(COLORS.green) + '▉'.repeat(aSeg) +
+    (optionsCount === 3 ? esc(COLORS.blue) + '▉'.repeat(bSeg) : '') +
+    esc(COLORS.red) + '▉'.repeat(cSeg) +
+    rst;
+
+    return (
+    '```ansi\n' +
+    esc(COLORS.gray) + '┏' + '━'.repeat(SEGMENTS) + '┓\n' +
+    '┃' + bar + '┃\n' +
+    '┗' + '━'.repeat(SEGMENTS) + '┛\n' +
+    '━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    footer(optionsCount, votes) +
+    '\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n' +
+    '```'
+    );
+}
+
+function footer(c, v) {
+    return c === 3
+    ? `${esc(COLORS.green)} ⬤ ${v.a}${rst} | ${esc(COLORS.blue)} ⬤ ${v.b}${rst} | ${esc(COLORS.red)} ⬤ ${v.c}${rst}`
+    : `${esc(COLORS.green)} ⬤ ${v.a}${rst} | ${esc(COLORS.red)} ⬤ ${v.c}${rst}`;
+}
+
+client.on('messageCreate', async msg => {
+    if (!msg.author.bot) return;
+    if (!msg.content.startsWith('📊')) return;
+
+    polls.set(msg.id, {
+        optionsCount: msg.content.includes('🔵') ? 3 : 2,
+        votes: { a: new Set(), b: new Set(), c: new Set() },
+    });
+
+    await msg.react('🟢');
+    if (polls.get(msg.id).optionsCount === 3) await msg.react('🔵');
+    await msg.react('🔴');
+});
+
+client.on('messageReactionAdd', async (reaction, user) => {
+    if (user.bot) return;
+    if (reaction.partial) await reaction.fetch();
+
+    const poll = polls.get(reaction.message.id);
+    if (!poll) return;
+
+    const name = reaction.emoji.name;
+    const allowed = poll.optionsCount === 3
+    ? ['🟢','🔵','🔴']
+    : ['🟢','🔴'];
+
+    if (!allowed.includes(name)) {
+        return reaction.users.remove(user.id);
+    }
+
+    // удалить другие реакции пользователя
+    for (const r of reaction.message.reactions.cache.values()) {
+        if (r.emoji.name !== name && r.users.cache.has(user.id)) {
+            await r.users.remove(user.id).catch(()=>{});
+        }
+    }
+
+    poll.votes.a.delete(user.id);
+    poll.votes.b.delete(user.id);
+    poll.votes.c.delete(user.id);
+
+    if (name === '🟢') poll.votes.a.add(user.id);
+    if (name === '🔵') poll.votes.b.add(user.id);
+    if (name === '🔴') poll.votes.c.add(user.id);
+
+    await redrawPoll(reaction.message, poll);
+});
+
+async function redrawPoll(msg, poll) {
+    const votes = {
+        a: poll.votes.a.size,
+        b: poll.votes.b.size,
+        c: poll.votes.c.size,
+    };
+
+    const [header, , labels] = msg.content.split('```');
+
+    const content =
+    header +
+    buildPollAnsi(poll.optionsCount, votes) +
+    labels;
+
+    await msg.edit(content);
+}
+
 
 // ================== CLIENT READY ==================
 client.once(Events.ClientReady, () => {
-console.log(`✅ Logged in as ${client.user.tag}`);
+    console.log(`✅ Logged in as ${client.user.tag}`);
 
-setInterval(() => {
+    setInterval(() => {
 fetch(`${process.env.RENDER_EXTERNAL_URL}/ping`)
     .then(() => console.log('💤 Self-ping OK'))
     .catch(() => {});
