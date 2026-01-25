@@ -150,8 +150,6 @@ async function handleLabelsSubmit(body, res) {
     });
 }
 
-const SEGMENTS = 66;
-
 const COLORS = {
     gray: '1;30',
     green: '1;32',
