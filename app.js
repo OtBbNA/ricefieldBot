@@ -45,10 +45,32 @@ const rst = '\x1b[0m';
 app.get('/ping', (_, res) => res.send('ok'));
 
 // ❗ JSON ВЕЗДЕ, КРОМЕ /interactions
-app.use((req, res, next) => {
-    if (req.path === '/interactions') return next();
-    express.json()(req, res, next);
-});
+const app = express();
+
+/* НИ ОДНОГО json middleware */
+
+app.post(
+    '/interactions',
+    express.raw({ type: '*/*' }),
+    verifyKeyMiddleware(process.env.PUBLIC_KEY),
+    (req, res) => {
+        console.log('🔥 INTERACTION RECEIVED');
+
+        const body = req.body;
+
+        if (body.type === InteractionType.PING) {
+            console.log('🏓 PING');
+            return res.send({ type: InteractionResponseType.PONG });
+        }
+
+        return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: 'ok' },
+        });
+    }
+);
+
+app.get('/ping', (req, res) => res.send('ok'));
 
 // ================== INTERACTIONS ==================
 app.post(
