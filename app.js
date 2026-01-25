@@ -17,6 +17,7 @@ Events,
 process.on('unhandledRejection', e => console.error('UNHANDLED:', e));
 process.on('uncaughtException', e => console.error('UNCAUGHT:', e));
 
+const app = express();
 const PORT = process.env.PORT || 10000;
 
 // ================== DISCORD CLIENT ==================
@@ -42,11 +43,6 @@ const rst = '\x1b[0m';
 
 // ================== EXPRESS ==================
 app.get('/ping', (_, res) => res.send('ok'));
-
-// ❗ JSON ВЕЗДЕ, КРОМЕ /interactions
-const app = express();
-
-/* НИ ОДНОГО json middleware */
 
 app.post(
     '/interactions',
