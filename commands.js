@@ -46,10 +46,23 @@ async function createCommand() {
         ],
     };
 
+    const filmCommand = {
+        name: 'film',
+        description: 'Парсит фильм с Кинопоиска',
+        options: [
+            {
+                name: 'url',
+                description: 'Ссылка на фильм kinopoisk.ru',
+                type: 3, // STRING
+                required: true,
+            },
+        ],
+    };
+
     try {
         const res = await DiscordRequest(endpoint, {
             method: 'PUT',
-            body: [marketCommand, rateCommand],
+            body: [marketCommand, rateCommand, filmCommand],
         });
         console.log('✅ Команды /market и /rate обновлены:', await res.json());
     } catch (err) {

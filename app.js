@@ -45,7 +45,121 @@ app.post(
                 return res.send({ type: InteractionResponseType.PONG });
             }
 
-            if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
+            if (type === InteractionType.APPLICATION_COMMAND && data.name === 'film') {
+                const url = data.options.find(o => o.name === 'url')?.value;
+
+                if (!url || !url.includes('kinopoisk.ru/film/')) {
+                    return res.send({
+                        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                        data: {
+                            flags: 64,
+                            content: '❌ Нужна ссылка вида https://www.kinopoisk.ru/film/XXXX/',
+                        },
+                    });
+                }
+
+                // мгновенно отвечаем
+                res.send({
+                    type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { flags: 64 },
+                });
+
+                (async () => {
+                    try {
+                        const html = await fetch(url, {
+                            headers: {
+                                'User-Agent': 'Mozilla/5.0',
+                                'Accept-Language': 'ru-RU,ru;q=0.9',
+                            },
+                        }).then(r => r.text());
+
+                        const cheerio = await import('cheerio');
+                        const $ = cheerio.load(html);
+
+                        // ---------- helpers ----------
+                        const NA = '\x1b[1;30m—\x1b[0m';
+
+                        const text = (sel) => $(sel).first().text().trim() || NA;
+
+                        const ratingColor = (v) => {
+                            if (!v || v === 'N/A') return '\x1b[1;30m';
+                            const n = parseFloat(v);
+                            if (n >= 9) return '\x1b[1;34m';
+                            if (n >= 7) return '\x1b[1;32m';
+                            if (n >= 5) return '\x1b[1;33m';
+                            return '\x1b[1;31m';
+                        };
+
+                        // ---------- title ----------
+                        const ruTitle = $('h1').first().text().trim();
+                        const enTitle = $('span[data-tid="a1e9d2f"]').first().text().trim();
+                        const titleLine = enTitle ? `**${ruTitle}** (${enTitle})` : `**${ruTitle}**`;
+
+                        // ---------- facts ----------
+                        const year = text('a[href^="/lists/movies/year"]');
+                        const country = $('a[href^="/lists/movies/country"]').map((_,e)=>$(e).text()).get().join(', ') || NA;
+                        const genre = $('a[href^="/lists/movies/genre"]').map((_,e)=>$(e).text()).get().join(', ') || NA;
+
+                        const director = $('a[itemprop="director"]').first().text().trim() || NA;
+                        const composer = $('a[itemprop="musicBy"]').first().text().trim() || NA;
+
+                        // ---------- actors ----------
+                        const actors = $('a[itemprop="actor"]')
+                            .map((_,e)=>$(e).text().trim())
+                            .get()
+                            .join(', ') || NA;
+
+                        // ---------- ratings ----------
+                        const imdbRaw = $('div.film-sub-rating span')
+                            .filter((_,e)=>$(e).text().includes('IMDb'))
+                            .text()
+                            .match(/IMDb:\s*([\d.]+)/)?.[1] || 'N/A';
+
+                        const kpRaw = $('span[data-tid="rating"]').first().text().trim() || 'N/A';
+
+                        const imdb = `${ratingColor(imdbRaw)}${imdbRaw}\x1b[0m`;
+                        const kp = `${ratingColor(kpRaw)}${kpRaw}\x1b[0m`;
+
+                        // ---------- poster ----------
+                        const poster = $('img[alt][src*="st.kp.yandex.net"]').attr('src');
+
+                        // ---------- message ----------
+                        const content =
+                        `ㅤ
+                        ${titleLine}
+                        **[Кинопоиск](${url})**
+                        \`\`\`ansi
+                        \x1b[1;36m       Год:\x1b[0m   ${year}
+                    \x1b[1;36m    Страна:\x1b[0m   ${country}
+                \x1b[1;36m      Жанр:\x1b[0m   ${genre}
+            \x1b[1;36m  Режиссер:\x1b[0m   ${director}
+        \x1b[1;36mКомпозитор:\x1b[0m   ${composer}
+\x1b[1;36m   В ролях:\x1b[0m   ${actors}
+
+IMDb: ${imdb}             Кинопоиск: ${kp}
+\`\`\``;
+
+// ---------- follow-up ----------
+await fetch(`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}`, {
+method: 'POST',
+headers: { 'Content-Type': 'application/json' },
+body: JSON.stringify({
+flags: 64,
+content,
+embeds: poster ? [{ image: { url: poster } }] : [],
+}),
+});
+
+} catch (err) {
+console.error('film error:', err);
+}
+})();
+
+return;
+}
+
+
+if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
                 try {
                     // минимальная обработка
                     const topicOption = data.options.find(o => o.name === 'topic');
