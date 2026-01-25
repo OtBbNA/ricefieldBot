@@ -37,138 +37,113 @@ app.post(
     express.raw({ type: '*/*' }),
     verifyKeyMiddleware(process.env.PUBLIC_KEY),
     async (req, res) => {
+        let body;
+
         try {
-            const body = req.body; // <-- УЖЕ ГОТОВЫЙ ОБЪЕКТ
-
-            if (!body || typeof body !== 'object') {
-                console.error('❌ INVALID BODY TYPE:', typeof body);
-                return res.sendStatus(400);
-            }
-
-            const { type, data } = body;
-
-            if (type === InteractionType.PING) {
-                return res.send({ type: InteractionResponseType.PONG });
-            }
-
-            // дальше твоя логика
-        } catch (err) {
-            console.error('❌ interactions error:', err);
-            return res.sendStatus(500);
+            body = JSON.parse(req.body.toString());
+        } catch (e) {
+            console.error('❌ BODY PARSE FAILED');
+            return res.sendStatus(400);
         }
+
+        const { type, data } = body;
+
+        // ===== PING =====
+        if (type === InteractionType.PING) {
+            return res.send({ type: InteractionResponseType.PONG });
+        }
+
+        // ===== /market =====
+        if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
+            try {
+                const topicOption = data.options.find(o => o.name === 'topic');
+                const optionsOption = data.options.find(o => o.name === 'options');
+
+                const topic = topicOption?.value || 'Без темы';
+                const optionsCount = optionsOption?.value === 3 ? 3 : 2;
+
+                return res.send({
+                    type: InteractionResponseType.MODAL,
+                    data: buildLabelsModal(topic.slice(0, 300), optionsCount),
+                });
+            } catch (err) {
+                console.error('market error:', err);
+                return res.send({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { content: 'Ошибка команды /market' },
+                });
+            }
+        }
+
+        // ===== /rate =====
+        if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
+            const messageLink = data.options.find(o => o.name === 'message')?.value;
+
+            if (!messageLink) {
+                return res.send({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { content: '❌ Укажи ссылку на сообщение.' },
+                });
+            }
+
+            const match = messageLink.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
+            if (!match) {
+                return res.send({
+                    type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                    data: { content: '❌ Неверный формат ссылки.' },
+                });
+            }
+
+            const [, , channelId, messageId] = match;
+
+            // мгновенный ответ
+            res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
+
+            // async-часть
+            setTimeout(async () => {
+                try {
+                    const channel = await client.channels.fetch(channelId);
+                    if (!channel?.isTextBased()) return;
+
+                    const msg = await channel.messages.fetch(messageId);
+                    const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+
+                    for (const e of emojis) {
+                        await msg.react(e);
+                    }
+
+                    // удалить "думает..."
+                    const deleteUrl =
+                    `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
+
+                    await fetch(deleteUrl, { method: 'DELETE' });
+
+                    console.log('✅ rate done');
+                } catch (err) {
+                    console.error('rate async error:', err);
+                }
+            }, 100);
+
+            return;
+        }
+
+        // ===== MODAL SUBMIT =====
+        if (
+        type === InteractionType.MODAL_SUBMIT &&
+        data.custom_id?.startsWith('market_labels|')
+        ) {
+            return handleLabelsSubmit(body, res);
+        }
+
+        return res.sendStatus(400);
     }
 );
 
 
-if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
-try {
-// минимальная обработка
-const topicOption = data.options.find(o => o.name === 'topic');
-const optionsOption = data.options.find(o => o.name === 'options');
-
-const topic = topicOption?.value || 'Без темы';
-const optionsCount = optionsOption?.value === 3 ? 3 : 2;
-
-// Отправляем МГНОВЕННО, без async
-return res.send({
-type: InteractionResponseType.MODAL,
-data: buildLabelsModal(topic.slice(0, 300), optionsCount), // ограничим topic
-});
-} catch (err) {
-console.error('modal error', err);
-return res.send({
-type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-data: { content: 'Ошибка при открытии модального окна.' },
-});
-}
-}
-
-
-// ====== /rate ======
-// ====== /rate ======
-if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
-try {
-const messageLink = data.options.find(o => o.name === 'message')?.value;
-
-if (!messageLink) {
-return res.send({
-type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-data: { content: '❌ Укажи ссылку на сообщение.' },
-});
-}
-
-const match = messageLink.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
-if (!match) {
-return res.send({
-type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-data: { content: '❌ Неверный формат ссылки.' },
-});
-}
-
-const [, guildId, channelId, messageId] = match;
-
-res.send({
-type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
-});
-
-setTimeout(async () => {
-try {
-const channel = await client.channels.fetch(channelId);
-if (!channel?.isTextBased()) return;
-
-const msg = await channel.messages.fetch(messageId);
-if (!msg) return;
-
-const emojis = [
-'1️⃣','2️⃣','3️⃣','4️⃣','5️⃣',
-'6️⃣','7️⃣','8️⃣','9️⃣','🔟'
-];
-
-for (const emoji of emojis) {
-await msg.react(emoji);
-}
-
-console.log(`✅ Added rating reactions to ${messageId}`);
-
-// --- 🎯 Удаляем оригинальное сообщение ответа бота ---
-const deleteUrl =
-`https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
-
-await fetch(deleteUrl, { method: "DELETE" });
-
-} catch (err) {
-console.error("rate async error:", err);
-}
-}, 150);
-
-return;
-
-} catch (err) {
-console.error("rate command error", err);
-return res.send({
-type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-data: { content: 'Произошла ошибка при добавлении реакций.' },
-});
-}
-}
-
-
 // --- Modal submit
 if (type === InteractionType.MODAL_SUBMIT && data?.custom_id?.startsWith('market_labels|')) {
-return handleLabelsSubmit(body, res);
+    return handleLabelsSubmit(body, res);
 }
-
-return res.status(400).send();
-} catch (err) {
-console.error('interactions error', err);
-return res.status(500).send({
-type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-data: { content: 'Произошла ошибка.' },
-});
-}
-}
-);
-
 const polls = new Map();
 const pendingTopics = new Map();
 const ignoreRemovals = new Set();
