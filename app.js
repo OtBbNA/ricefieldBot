@@ -38,7 +38,7 @@ express.raw({ type: '*/*' }),
 verifyKeyMiddleware(process.env.PUBLIC_KEY),
 async (req, res) => {
     try {
-        const body = req.body;
+
         let body;
 
         try {
