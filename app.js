@@ -110,7 +110,9 @@ async (req, res) => {
 
             return;
         }
-
+    }
+}
+);
 
 
 if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
