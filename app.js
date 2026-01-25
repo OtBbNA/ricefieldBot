@@ -56,77 +56,22 @@ app.post(
     express.raw({ type: '*/*' }),
     verifyKeyMiddleware(process.env.PUBLIC_KEY),
     async (req, res) => {
-        let body;
 
-        try {
-            body = JSON.parse(req.body.toString());
-        } catch {
-            console.error('❌ BODY PARSE FAILED');
-            return res.sendStatus(400);
-        }
+        const body = req.body; // ← УЖЕ ОБЪЕКТ
 
         const { type, data } = body;
 
-        // ===== PING =====
         if (type === InteractionType.PING) {
             return res.send({ type: InteractionResponseType.PONG });
         }
 
-        // ===== /market =====
-        if (type === InteractionType.APPLICATION_COMMAND && data.name === 'market') {
-            const topic = data.options.find(o => o.name === 'topic')?.value || 'Без темы';
-            const optionsCount =
-            data.options.find(o => o.name === 'options')?.value === 3 ? 3 : 2;
-
-            return res.send({
-                type: InteractionResponseType.MODAL,
-                data: buildLabelsModal(topic.slice(0, 300), optionsCount),
-            });
-        }
-
-        // ===== /rate =====
-        if (type === InteractionType.APPLICATION_COMMAND && data.name === 'rate') {
-            const link = data.options.find(o => o.name === 'message')?.value;
-            const match = link?.match(/channels\/(\d+)\/(\d+)\/(\d+)/);
-
-            if (!match) {
+        if (type === InteractionType.APPLICATION_COMMAND) {
+            if (data.name === 'market') {
                 return res.send({
                     type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                    data: { content: '❌ Неверная ссылка.' },
+                    data: { content: 'market ok' },
                 });
             }
-
-            res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE });
-
-            const [, , channelId, messageId] = match;
-
-            setTimeout(async () => {
-                try {
-                    const channel = await client.channels.fetch(channelId);
-                    const msg = await channel.messages.fetch(messageId);
-                    for (const e of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
-                        await msg.react(e);
-                    }
-
-                    // удалить "думает..."
-                    await fetch(
-                        `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`,
-                        { method: 'DELETE' }
-                    );
-                } catch (e) {
-                    console.error('rate error:', e);
-                }
-            }, 100);
-
-            return;
-        }
-
-        // ===== MODAL SUBMIT =====
-        if (
-        type === InteractionType.MODAL_SUBMIT &&
-        data.custom_id?.startsWith('market_labels|')
-        ) {
-            return handleLabelsSubmit(body, res);
         }
 
         return res.sendStatus(400);
