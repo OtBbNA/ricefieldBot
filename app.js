@@ -17,7 +17,6 @@ Events,
 process.on('unhandledRejection', e => console.error('UNHANDLED:', e));
 process.on('uncaughtException', e => console.error('UNCAUGHT:', e));
 
-const app = express();
 const PORT = process.env.PORT || 10000;
 
 // ================== DISCORD CLIENT ==================
