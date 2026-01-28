@@ -1,15 +1,15 @@
-const { SlashCommandBuilder } = require('discord.js');
-const parseMessageLink = require('../utils/parseMessageLink');
+import { SlashCommandBuilder } from 'discord.js';
+import parseMessageLink from '../utils/parseMessageLink.js';
 
 const reactions = [
     '1️⃣','2️⃣','3️⃣','4️⃣','5️⃣',
     '6️⃣','7️⃣','8️⃣','9️⃣','🔟'
 ];
 
-module.exports = {
+export default {
     data: new SlashCommandBuilder()
         .setName('rate')
-        .setDescription('Добавляет реакции от 1 до 10 к сообщению')
+        .setDescription('Добавляет реакции от 1 до 10')
         .addStringOption(option =>
     option
         .setName('message_link')
