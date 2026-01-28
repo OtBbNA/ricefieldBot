@@ -72,7 +72,8 @@ app.post(
                     console.error('❌ Rate background error:', err);
                 }
             });
-        return routeInteraction(req.body, res);
+            return routeInteraction(req.body, res);
+        }
     }
 );
 
