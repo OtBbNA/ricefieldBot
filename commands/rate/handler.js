@@ -31,21 +31,33 @@ export function handleRate(body, res) {
         // ✅ фоновая логика
         setImmediate(async () => {
             try {
+                console.log('▶ rate background start');
+
                 const channel = await client.channels.fetch(channelId);
-                if (!channel?.isTextBased()) return;
+                console.log('✔ channel fetched');
+
+                if (!channel?.isTextBased()) {
+                    console.log('✖ not text channel');
+                    return;
+                }
 
                 const msg = await channel.messages.fetch(messageId);
+                console.log('✔ message fetched');
 
                 for (const e of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
                     await msg.react(e);
+                    console.log('➕ reacted', e);
                 }
 
                 await fetch(
                     `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`,
                     { method: 'DELETE' }
                 );
+
+                console.log('🧹 deferred message deleted');
+
             } catch (err) {
-                console.error('rate background error', err);
+                console.error('❌ rate background error', err);
             }
         });
 
