@@ -49,15 +49,14 @@ export async function handleCommand(body, res) {
 
             logSuccess(`Reactions added to ${messageId}`);
 
-            const editUrl =
+            const finalizeUrl =
             `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
-            await fetch(editUrl, {
+            await fetch(finalizeUrl, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    content: '✅ Оценки добавлены',
-                    flags: 64 // EPHEMERAL
+                    content: ' ', // ← один пробел
                 }),
             });
 
