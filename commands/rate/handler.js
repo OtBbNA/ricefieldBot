@@ -2,6 +2,7 @@ import { InteractionResponseType } from 'discord-interactions';
 import fetch from 'node-fetch';
 import { client } from '../../state/discordClient.js';
 import { logIncoming, logSuccess, logError } from '../../utils/logger.js';
+import { clientReady } from '../../state/clientReady.js';
 
 export async function handleCommand(body, res) {
     const messageLink =
@@ -32,6 +33,9 @@ export async function handleCommand(body, res) {
         logIncoming(`Rate async started for message ${messageId}`);
 
         try {
+            await clientReady;
+            logSuccess('Discord client is ready');
+
             const channel = await client.channels.fetch(channelId);
             logSuccess(`Channel fetched: ${channelId}`);
 
@@ -42,16 +46,18 @@ export async function handleCommand(body, res) {
             for (const emoji of emojis) {
                 await msg.react(emoji);
             }
+
             logSuccess(`Reactions added to ${messageId}`);
 
             const deleteUrl =
             `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
             await fetch(deleteUrl, { method: 'DELETE' });
-            logSuccess(`Deferred response deleted (thinking stopped)`);
+            logSuccess('Deferred response deleted (thinking stopped)');
 
         } catch (err) {
             logError('Rate async failed', err);
         }
     }, 150);
+
 }
