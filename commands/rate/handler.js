@@ -28,8 +28,6 @@ export async function handleCommand(body, res) {
         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
     });
 
-    import { logIncoming, logSuccess, logError } from '../../utils/logger.js';
-
     setTimeout(async () => {
         logIncoming(`Rate async started for message ${messageId}`);
 
