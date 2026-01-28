@@ -28,9 +28,13 @@ app.post(
 );
 
 app.listen(process.env.PORT || 3000);
-console.log('🚀 before client.login');
+console.log('🚀 BEFORE client.login');
+
+client.once('ready', () => {
+    console.log('🤖 CLIENT READY', client.user.tag);
+});
 
 client.login(process.env.DISCORD_TOKEN);
 
-console.log('🚀 after client.login');
+console.log('🚀 AFTER client.login');
 registerReactionHandlers(client);
