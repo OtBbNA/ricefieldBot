@@ -1,11 +1,6 @@
 import { SlashCommandBuilder } from 'discord.js';
 import parseMessageLink from '../utils/parseMessageLink.js';
 
-const reactions = [
-    '1️⃣','2️⃣','3️⃣','4️⃣','5️⃣',
-    '6️⃣','7️⃣','8️⃣','9️⃣','🔟'
-];
-
 export default {
     data: new SlashCommandBuilder()
         .setName('rate')
@@ -22,7 +17,7 @@ export default {
         const parsed = parseMessageLink(link);
 
         if (!parsed) {
-            return interaction.reply({ content: '❌ Неверная ссылка.', ephemeral: true });
+            return interaction.reply({ content: '❌ Неверная ссылка', ephemeral: true });
         }
 
         const channel = await interaction.client.channels
@@ -30,7 +25,7 @@ export default {
             .catch(() => null);
 
         if (!channel) {
-            return interaction.reply({ content: '❌ Канал не найден.', ephemeral: true });
+            return interaction.reply({ content: '❌ Канал не найден', ephemeral: true });
         }
 
         const message = await channel.messages
@@ -38,13 +33,13 @@ export default {
             .catch(() => null);
 
         if (!message) {
-            return interaction.reply({ content: '❌ Сообщение не найдено.', ephemeral: true });
+            return interaction.reply({ content: '❌ Сообщение не найдено', ephemeral: true });
         }
 
-        for (const r of reactions) {
+        for (const r of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
             await message.react(r);
         }
 
-        await interaction.reply({ content: '✅ Реакции добавлены!', ephemeral: true });
+        await interaction.reply({ content: '✅ Реакции добавлены', ephemeral: true });
     }
 };
