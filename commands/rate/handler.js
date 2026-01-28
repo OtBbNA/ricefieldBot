@@ -23,10 +23,8 @@ export function handleRate(body, res) {
 
         const [, channelId, messageId] = match;
 
-        // ✅ мгновенно закрываем interaction
-        res.status(200).json({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: ' ' },
+        res.json({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
         });
 
         // ✅ фоновая логика
@@ -39,6 +37,11 @@ export function handleRate(body, res) {
             for (const e of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
                 await msg.react(e);
             }
+
+            await fetch(
+                `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`,
+                { method: 'DELETE' }
+            );
         });
 
     } catch (err) {
