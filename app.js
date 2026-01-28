@@ -8,11 +8,15 @@ import { handleRate } from './commands/rate/handler.js';
 
 const app = express();
 
-console.log('📦 app.js reached client setup');
+console.log('🚀 BEFORE LOGIN');
 
 client.once('ready', () => {
-    console.log(`🤖 Discord client logged in as ${client.user.tag}`);
+    console.log('🤖 CLIENT READY:', client.user.tag);
 });
+
+await client.login(process.env.DISCORD_TOKEN);
+
+console.log('🚀 AFTER LOGIN');
 
 app.post(
     '/interactions',
@@ -28,13 +32,4 @@ app.post(
 );
 
 app.listen(process.env.PORT || 3000);
-console.log('🚀 BEFORE client.login');
-
-client.once('ready', () => {
-    console.log('🤖 CLIENT READY', client.user.tag);
-});
-
-client.login(process.env.DISCORD_TOKEN);
-
-console.log('🚀 AFTER client.login');
 registerReactionHandlers(client);
