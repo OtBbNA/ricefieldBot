@@ -30,40 +30,45 @@ export async function handleCommand(body, res) {
     });
 
     setTimeout(async () => {
-        logIncoming(`Rate async started for message ${messageId}`);
-
         try {
-            await clientReady;
-            logSuccess('Discord client is ready');
+            console.log('➡️ Rate async started for message', messageId);
 
             const channel = await client.channels.fetch(channelId);
-            logSuccess(`Channel fetched: ${channelId}`);
+            if (!channel || !channel.isTextBased()) {
+                console.error('❌ Channel not text based');
+                return;
+            }
 
             const msg = await channel.messages.fetch(messageId);
-            logSuccess(`Message fetched: ${messageId}`);
+            if (!msg) {
+                console.error('❌ Message not found');
+                return;
+            }
 
             const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
             for (const emoji of emojis) {
                 await msg.react(emoji);
             }
 
-            logSuccess(`Reactions added to ${messageId}`);
+            console.log('✅ Reactions added');
 
+            // 🔴 ВАЖНО: interaction finalize
             const finalizeUrl =
             `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
-            await fetch(finalizeUrl, {
+            console.log('➡️ Finalizing interaction via', finalizeUrl);
+
+            const r = await fetch(finalizeUrl, {
                 method: 'PATCH',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: ' ', // ← один пробел
-                }),
+                body: JSON.stringify({ content: ' ' }),
             });
 
+            console.log('✅ Finalize status:', r.status);
 
         } catch (err) {
-            logError('Rate async failed', err);
+            console.error('❌ Rate async error:', err);
         }
-    }, 150);
+    }, 0);
 
 }
