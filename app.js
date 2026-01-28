@@ -27,6 +27,9 @@ app.post(
 );
 
 app.listen(process.env.PORT || 3000);
+console.log('🚀 before client.login');
+
 client.login(process.env.DISCORD_TOKEN);
-console.log('🚀 client.login() called');
+
+console.log('🚀 after client.login');
 registerReactionHandlers(client);
