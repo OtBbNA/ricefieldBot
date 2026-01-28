@@ -1,4 +1,4 @@
-// commands.js (GUILD version, instant update)
+// deploy-commands.js (GUILD version, instant update)
 import 'dotenv/config';
 import { DiscordRequest } from './utils.js';
 

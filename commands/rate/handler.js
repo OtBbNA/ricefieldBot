@@ -49,11 +49,18 @@ export async function handleCommand(body, res) {
 
             logSuccess(`Reactions added to ${messageId}`);
 
-            const deleteUrl =
+            const editUrl =
             `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
-            await fetch(deleteUrl, { method: 'DELETE' });
-            logSuccess('Deferred response deleted (thinking stopped)');
+            await fetch(editUrl, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: '✅ Оценки добавлены',
+                    flags: 64 // EPHEMERAL
+                }),
+            });
+
 
         } catch (err) {
             logError('Rate async failed', err);
