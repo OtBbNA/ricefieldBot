@@ -1,5 +1,5 @@
 import definition from './definition.js';
-import { handleCommand } from './handler.js';
+import { handleRate } from './handler.js';
 
 export default {
     name: 'rate',
