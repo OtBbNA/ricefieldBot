@@ -7,6 +7,11 @@ import { registerReactionHandlers } from './polls/reactions.js';
 
 const app = express();
 
+
+client.once('ready', () => {
+    console.log(`🤖 Discord client logged in as ${client.user.tag}`);
+});
+
 app.post(
     '/interactions',
     express.raw({ type: '*/*' }),
@@ -22,4 +27,5 @@ app.post(
 
 app.listen(process.env.PORT || 3000);
 client.login(process.env.DISCORD_TOKEN);
+console.log('🚀 client.login() called');
 registerReactionHandlers(client);
