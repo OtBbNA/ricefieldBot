@@ -1,12 +1,10 @@
 import { Client, GatewayIntentBits, Collection } from 'discord.js';
 import commandHandler from './handlers/commandHandler.js';
 import eventHandler from './handlers/eventHandler.js';
-import { token } from './config.json' assert { type: 'json' };
+import { token } from './config.js';
 
 const client = new Client({
-    intents: [
-        GatewayIntentBits.Guilds,
-    ],
+    intents: [GatewayIntentBits.Guilds],
 });
 
 client.commands = new Collection();
