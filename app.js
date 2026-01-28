@@ -4,6 +4,7 @@ import { verifyKeyMiddleware, InteractionResponseType, InteractionType } from 'd
 import { routeInteraction } from './interactions/router.js';
 import { client } from './state/discordClient.js';
 import { registerReactionHandlers } from './polls/reactions.js';
+import { handleRate } from './commands/rate/handler.js';
 
 const app = express();
 
