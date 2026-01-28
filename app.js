@@ -1,24 +1,36 @@
-import 'dotenv/config';
-import express from 'express';
-import { client } from './state/discordClient.js';
+const { Client, GatewayIntentBits, Collection } = require('discord.js');
+const { token } = require('./config.json');
+const commandHandler = require('./handlers/commandHandler');
+const { prefix } = require('./config.json');
 
-const app = express();
-const PORT = process.env.PORT || 3000;
-
-/* ===== EXPRESS ===== */
-app.get('/ping', (req, res) => res.send('ok'));
-
-app.listen(PORT, () => {
-    console.log(`🌐 Express listening on ${PORT}`);
+const client = new Client({
+    intents: [
+        GatewayIntentBits.Guilds,
+        GatewayIntentBits.GuildMessages,
+        GatewayIntentBits.MessageContent
+    ]
 });
 
-/* ===== DISCORD ===== */
-console.log('🚀 BEFORE LOGIN');
+client.commands = new Collection();
 
-client.once('ready', () => {
-    console.log('🤖 CLIENT READY:', client.user.tag);
+// загрузка команд
+commandHandler(client);
+
+client.login(token);
+
+client.on('messageCreate', async message => {
+    if (!message.content.startsWith(prefix) || message.author.bot) return;
+
+    const args = message.content.slice(prefix.length).trim().split(/ +/);
+    const commandName = args.shift().toLowerCase();
+
+    const command = client.commands.get(commandName);
+    if (!command) return;
+
+    try {
+        await command.execute(message, args, client);
+    } catch (error) {
+        console.error(error);
+        message.reply('❌ Ошибка при выполнении команды.');
+    }
 });
-
-client.login(process.env.DISCORD_TOKEN)
-    .then(() => console.log('🚀 LOGIN PROMISE RESOLVED'))
-    .catch(err => console.error('❌ LOGIN ERROR', err));
