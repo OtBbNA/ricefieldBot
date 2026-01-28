@@ -1,5 +1,7 @@
 import { Client, GatewayIntentBits, Partials } from 'discord.js';
 
+console.log('📦 discordClient.js loaded');
+
 export const client = new Client({
     intents: [
         GatewayIntentBits.Guilds,

@@ -8,6 +8,7 @@ import { handleRate } from './commands/rate/handler.js';
 
 const app = express();
 
+console.log('📦 app.js reached client setup');
 
 client.once('ready', () => {
     console.log(`🤖 Discord client logged in as ${client.user.tag}`);
