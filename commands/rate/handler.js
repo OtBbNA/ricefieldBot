@@ -26,24 +26,21 @@ export async function handleCommand(body, res) {
     const [, , channelId, messageId] = match;
 
     res.send({
-        type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+        type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+        data: {
+            content: ' ', // ← один пробел
+        },
     });
 
-    setTimeout(async () => {
+    setImmediate(async () => {
         try {
-            console.log('➡️ Rate async started for message', messageId);
+            console.log('➡️ Rate background started', messageId);
 
             const channel = await client.channels.fetch(channelId);
-            if (!channel || !channel.isTextBased()) {
-                console.error('❌ Channel not text based');
-                return;
-            }
+            if (!channel?.isTextBased()) return;
 
             const msg = await channel.messages.fetch(messageId);
-            if (!msg) {
-                console.error('❌ Message not found');
-                return;
-            }
+            if (!msg) return;
 
             const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
             for (const emoji of emojis) {
@@ -52,23 +49,8 @@ export async function handleCommand(body, res) {
 
             console.log('✅ Reactions added');
 
-            // 🔴 ВАЖНО: interaction finalize
-            const finalizeUrl =
-            `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
-
-            console.log('➡️ Finalizing interaction via', finalizeUrl);
-
-            const r = await fetch(finalizeUrl, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: ' ' }),
-            });
-
-            console.log('✅ Finalize status:', r.status);
-
         } catch (err) {
-            console.error('❌ Rate async error:', err);
+            console.error('❌ Rate background error:', err);
         }
-    }, 0);
-
+    });
 }
