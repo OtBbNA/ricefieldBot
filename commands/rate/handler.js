@@ -1,5 +1,6 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { client } from '../../state/discordClient.js';
+import fetch from 'node-fetch';
 
 export function handleRate(body, res) {
     try {
@@ -29,19 +30,23 @@ export function handleRate(body, res) {
 
         // ✅ фоновая логика
         setImmediate(async () => {
-            const channel = await client.channels.fetch(channelId);
-            if (!channel?.isTextBased()) return;
+            try {
+                const channel = await client.channels.fetch(channelId);
+                if (!channel?.isTextBased()) return;
 
-            const msg = await channel.messages.fetch(messageId);
+                const msg = await channel.messages.fetch(messageId);
 
-            for (const e of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
-                await msg.react(e);
+                for (const e of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
+                    await msg.react(e);
+                }
+
+                await fetch(
+                    `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`,
+                    { method: 'DELETE' }
+                );
+            } catch (err) {
+                console.error('rate background error', err);
             }
-
-            await fetch(
-                `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`,
-                { method: 'DELETE' }
-            );
         });
 
     } catch (err) {
