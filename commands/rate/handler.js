@@ -1,6 +1,7 @@
 import { InteractionResponseType } from 'discord-interactions';
 import fetch from 'node-fetch';
 import { client } from '../../state/discordClient.js';
+import { logIncoming, logSuccess, logError } from '../../utils/logger.js';
 
 export async function handleCommand(body, res) {
     const messageLink =
@@ -27,21 +28,32 @@ export async function handleCommand(body, res) {
         type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
     });
 
+    import { logIncoming, logSuccess, logError } from '../../utils/logger.js';
+
     setTimeout(async () => {
+        logIncoming(`Rate async started for message ${messageId}`);
+
         try {
             const channel = await client.channels.fetch(channelId);
-            const msg = await channel.messages.fetch(messageId);
+            logSuccess(`Channel fetched: ${channelId}`);
 
-            for (const emoji of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
+            const msg = await channel.messages.fetch(messageId);
+            logSuccess(`Message fetched: ${messageId}`);
+
+            const emojis = ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟'];
+            for (const emoji of emojis) {
                 await msg.react(emoji);
             }
+            logSuccess(`Reactions added to ${messageId}`);
 
             const deleteUrl =
             `https://discord.com/api/v10/webhooks/${body.application_id}/${body.token}/messages/@original`;
 
             await fetch(deleteUrl, { method: 'DELETE' });
+            logSuccess(`Deferred response deleted (thinking stopped)`);
+
         } catch (err) {
-            console.error('rate async error', err);
+            logError('Rate async failed', err);
         }
     }, 150);
 }
