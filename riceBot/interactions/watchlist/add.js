@@ -1,70 +1,56 @@
 import { InteractionResponseType } from 'discord-interactions';
+import { findWatchlistMessage } from '../../utils/findWatchlistMessage.js';
+import { renderWatchlist } from '../../utils/renderWatchlist.js';
+import { parseWatchlist } from '../../utils/parseWatchlist.js';
 import { client } from '../../client.js';
-import { findWatchlistMessage } from './findMessage.js';
-
-export const data = {
-    name: 'watchlist_add',
-    description: 'Добавить фильм в конец списка',
-    options: [
-        {
-            name: 'text',
-            description: 'Название фильма',
-            type: 3, // STRING
-            required: true,
-        },
-    ],
-};
 
 export const watchlistAdd = {
     name: 'watchlist_add',
 
     async execute(req, res) {
-
-        console.log('ADD: start');
-
+        // ✅ 1. СРАЗУ подтверждаем interaction
         res.send({
             type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-                flags: 64, // 👈 сообщение видно ТОЛЬКО пользователю
-            },
+            data: { flags: 64 }, // ephemeral
         });
 
-        const channelId = req.body.channel_id;
-        const text = req.body.data.options[0].value;
+        try {
+            console.log('ADD: start');
 
-        const channel = await client.channels.fetch(channelId);
-        const message = await findWatchlistMessage(channel);
+            const channelId = req.body.channel_id;
+            const channel = await client.channels.fetch(channelId);
+            if (!channel?.isTextBased()) {
+                console.log('ADD: channel not text');
+                return;
+            }
 
-        if (!message) {
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: '❌ Список не найден. Используй /watchlist_create',
-                    flags: 64,
-                },
-            });
+            const watchlistMessage = await findWatchlistMessage(channel);
+            console.log('ADD: message found?', !!watchlistMessage);
+
+            if (!watchlistMessage) {
+                console.log('ADD: no watchlist message');
+                return;
+            }
+
+            const text =
+            req.body.data.options?.find(o => o.name === 'text')?.value;
+
+            if (!text) {
+                console.log('ADD: no text');
+                return;
+            }
+
+            const items = parseWatchlist(watchlistMessage.content);
+            items.push(text);
+
+            const newContent = renderWatchlist(items);
+            console.log('ADD: editing message');
+
+            await watchlistMessage.edit(newContent);
+            console.log('ADD: done');
+
+        } catch (err) {
+            console.error('ADD ERROR:', err);
         }
-
-        console.log('ADD: message found?', !!watchlistMessage);
-
-        const items = parseWatchlist(message.content);
-        items.push(text);
-
-        await message.edit(renderWatchlist(items));
-
-        return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-                content: '✅ Добавлено в список.',
-                flags: 64,
-            },
-        });
-
-        console.log('ADD: editing message');
-
-        await fetch(
-            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-            { method: 'DELETE' }
-        );
     },
 };
