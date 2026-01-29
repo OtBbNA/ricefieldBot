@@ -20,6 +20,8 @@ export const watchlistAdd = {
 
     async execute(req, res) {
 
+        console.log('ADD: start');
+
         res.send({
             type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
             data: {
@@ -43,6 +45,8 @@ export const watchlistAdd = {
             });
         }
 
+        console.log('ADD: message found?', !!watchlistMessage);
+
         const items = parseWatchlist(message.content);
         items.push(text);
 
@@ -55,6 +59,8 @@ export const watchlistAdd = {
                 flags: 64,
             },
         });
+
+        console.log('ADD: editing message');
 
         await fetch(
             `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
