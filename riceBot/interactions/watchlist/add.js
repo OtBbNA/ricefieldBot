@@ -1,6 +1,19 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { getWatchlistMessage, parseList, buildMessage } from './utils.js';
 
+export const data = {
+    name: 'watchlist_add',
+    description: 'Добавить фильм в конец списка',
+    options: [
+        {
+            name: 'text',
+            description: 'Название фильма',
+            type: 3, // STRING
+            required: true,
+        },
+    ],
+};
+
 export const watchlistAdd = {
     name: 'watchlist_add',
 

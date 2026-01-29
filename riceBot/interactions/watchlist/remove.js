@@ -1,6 +1,19 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { getWatchlistMessage, parseList, buildMessage } from './utils.js';
 
+export const data = {
+    name: 'watchlist_remove',
+    description: 'Удалить фильм по номеру из списка',
+    options: [
+        {
+            name: 'number',
+            description: 'Номер фильма в списке',
+            type: 4, // INTEGER
+            required: true,
+        },
+    ],
+};
+
 export const watchlistRemove = {
     name: 'watchlist_remove',
 

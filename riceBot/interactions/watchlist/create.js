@@ -1,6 +1,12 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { getWatchlistMessage, buildMessage } from './utils.js';
 
+export const data = {
+    name: 'watchlist_create',
+    description: 'Создать новое сообщение списка фильмов в канале',
+};
+
+
 export const watchlistCreate = {
     name: 'watchlist_create',
 

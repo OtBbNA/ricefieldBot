@@ -3,6 +3,19 @@ import { client } from '../client.js';
 import { parseMessageLink } from '../utils/parseMessageLink.js';
 import fetch from 'node-fetch';
 
+export const data = {
+    name: 'rate',
+    description: 'Проставляет реакции 1-10 под сообщением',
+    options: [
+        {
+            name: 'message',
+            description: 'Ссылка на сообщение вида https://discord.com/channels/...',
+            type: 3, // STRING
+            required: true,
+        },
+    ],
+};
+
 export const rateCommand = {
     name: 'rate',
 
