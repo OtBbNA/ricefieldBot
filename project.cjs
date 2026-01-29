@@ -23,7 +23,7 @@
 
 riceBot/
 ├─ app.js
-├─ client.js          ✅ ТУТ
+├─ client.js
 ├─ config.js
 ├─ deploy-commands.js
 ├─ interactions/

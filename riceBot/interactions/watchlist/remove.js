@@ -1,76 +1,37 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { client } from '../../client.js';
 import { findWatchlistMessage } from './findMessage.js';
-
-export const data = {
-    name: 'watchlist_remove',
-    description: 'Удалить фильм по номеру из списка',
-    options: [
-        {
-            name: 'number',
-            description: 'Номер фильма в списке',
-            type: 4, // INTEGER
-            required: true,
-        },
-    ],
-};
+import { parseWatchlist } from './parse.js';
+import { renderWatchlist } from './utils.js';
 
 export const watchlistRemove = {
-    name: 'watchlist_remove',
-
     async execute(req, res) {
+        const index = req.body.data.options[0].value - 1;
 
-        res.send({
-            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-                flags: 64, // 👈 сообщение видно ТОЛЬКО пользователю
-            },
-        });
+        const channel = await req.client.channels.fetch(req.body.channel_id);
+        const msg = await findWatchlistMessage(channel);
 
-        const channelId = req.body.channel_id;
-        const number = req.body.data.options[0].value;
-
-        const channel = await client.channels.fetch(channelId);
-        const message = await findWatchlistMessage(channel);
-
-        if (!message) {
+        if (!msg) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: '❌ Список не найден. Используй /watchlist_create',
-                    flags: 64,
-                },
+                data: { content: '❌ Список не найден', flags: 64 },
             });
         }
 
-        const items = parseWatchlist(message.content);
-        const index = number - 1;
+        const items = parseWatchlist(msg.content);
 
         if (index < 0 || index >= items.length) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: '❌ Неверный номер в списке.',
-                    flags: 64,
-                },
+                data: { content: '❌ Неверный номер', flags: 64 },
             });
         }
 
-        const removed = items.splice(index, 1);
+        items.splice(index, 1);
+        await msg.edit(renderWatchlist(items));
 
-        await message.edit(renderWatchlist(items));
-
-        return res.send({
+        res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-                content: `🗑 Удалено: **${removed[0]}**`,
-                flags: 64,
-            },
+            data: { content: '🗑 Удалено', flags: 64 },
         });
-
-        await fetch(
-            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-            { method: 'DELETE' }
-        );
     },
 };

@@ -1,1 +1,1 @@
-export const WATCHLIST_HEADER = 'ᛕᛋᚺᛜ ᚺᚤ ᛒᛊᛋᛊᚹ';
+export const WATCHLIST_TITLE = 'ᛕᛋᚺᛜ ᚺᚤ ᛒᛊᛋᛊᚹ';

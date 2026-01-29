@@ -14,7 +14,7 @@ const commands = new Map([
     ['watchlist_remove', watchlistRemove],
 ]);
 
-export async function handleInteraction(req, res) {
+export function handleInteraction(req, res) {
     const { type, data } = req.body;
 
     if (type === InteractionType.PING) {
@@ -23,16 +23,14 @@ export async function handleInteraction(req, res) {
 
     if (type === InteractionType.APPLICATION_COMMAND) {
         const command = commands.get(data.name);
-
         if (!command) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Неизвестная команда.', flags: 64 },
+                data: { content: '❌ Неизвестная команда', flags: 64 },
             });
         }
-
         return command.execute(req, res);
     }
 
-    return res.status(400).send();
+    res.sendStatus(400);
 }
