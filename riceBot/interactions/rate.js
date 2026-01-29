@@ -1,6 +1,7 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { client } from '../client.js';
 import { parseMessageLink } from '../utils/parseMessageLink.js';
+import fetch from 'node-fetch';
 
 export const rateCommand = {
     name: 'rate',
@@ -27,6 +28,9 @@ export const rateCommand = {
 
         res.send({
             type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+                flags: 64,
+            },
         });
 
         setTimeout(async () => {
@@ -47,6 +51,11 @@ export const rateCommand = {
                 }
 
                 console.log(`✅ Rated message ${parsed.messageId}`);
+
+                const deleteUrl =
+                `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`;
+
+                await fetch(deleteUrl, { method: 'DELETE' });
             } catch (err) {
                 console.error('rate error:', err);
             }
