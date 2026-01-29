@@ -1,28 +1,19 @@
-import 'dotenv/config';
 import express from 'express';
-import {
-InteractionType,
-InteractionResponseType,
-verifyKeyMiddleware,
-} from 'discord-interactions';
+import { verifyKeyMiddleware } from 'discord-interactions';
 
+import { config } from './config.js';
 import { handleInteraction } from './interactions/index.js';
-import { client } from './client.js';
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+
+console.log('PUBLIC KEY:', config.publicKey);
 
 app.post(
     '/interactions',
-    express.raw({ type: '*/*' }),
-    verifyKeyMiddleware(process.env.PUBLIC_KEY),
+    verifyKeyMiddleware(config.publicKey),
     handleInteraction
 );
 
-app.get('/ping', (req, res) => res.send('ok'));
-
-app.listen(PORT, () => {
-    console.log(`🌐 Server running on ${PORT}`);
+app.listen(config.port, () => {
+    console.log(`🚀 Server running on port ${config.port}`);
 });
-
-client.login(process.env.DISCORD_TOKEN);
