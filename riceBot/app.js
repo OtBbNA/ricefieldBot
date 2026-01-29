@@ -6,16 +6,15 @@ import { client } from './client.js';
 
 const app = express();
 
-app.use(
+app.post(
     '/interactions',
     verifyKeyMiddleware(config.publicKey),
-    express.json(),
     (req, res) => {
         req.client = client;
         handleInteraction(req, res);
     }
 );
 
-app.listen(config.port, () =>
-console.log(`🚀 Server running on port ${config.port}`)
-);
+app.listen(config.port, () => {
+    console.log(`🚀 Server running on port ${config.port}`);
+});
