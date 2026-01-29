@@ -1,26 +1,32 @@
-import express from 'express';
-import {
-verifyKeyMiddleware,
-} from 'discord-interactions';
+import { InteractionResponseType } from 'discord-interactions';
+import { client } from '../../client.js';
+import { findWatchlistMessage } from './findMessage.js';
+import { parseWatchlist } from './parse.js';
+import { renderWatchlist } from './render.js';
 
-import { config } from './config.js';
-import { handleInteraction } from './interactions/index.js';
+export const watchlistAdd = {
+    name: 'watchlist_add',
 
-import './client.js';
+    async execute(req, res) {
+        const channel = await client.channels.fetch(req.body.channel_id);
+        const text = req.body.data.options[0].value;
 
-const app = express();
+        const message = await findWatchlistMessage(channel);
+        if (!message) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: { content: '❌ Список не найден.', flags: 64 },
+            });
+        }
 
-app.post(
-    '/interactions',
-    express.raw({ type: '*/*' }),
-    verifyKeyMiddleware(config.publicKey),
-    handleInteraction
-);
+        const items = parseWatchlist(message.content);
+        items.push(text);
 
-app.get('/', (_, res) => {
-    res.send('RiceBot is running 🌾');
-});
+        await message.edit(renderWatchlist(items));
 
-app.listen(config.port, () => {
-    console.log(`🌐 Web server listening on ${config.port}`);
-});
+        return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: '✅ Добавлено.', flags: 64 },
+        });
+    },
+};
