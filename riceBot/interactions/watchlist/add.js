@@ -1,7 +1,7 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { findWatchlistMessage } from '../../utils/findWatchlistMessage.js';
-import { renderWatchlist } from '../../utils/renderWatchlist.js';
-import { parseWatchlist } from '../../utils/parseWatchlist.js';
+import { findWatchlistMessage } from './findMessage.js';
+import { renderWatchlist } from './utils.js';
+import { parseWatchlist } from './parse.js';
 import { client } from '../../client.js';
 
 export const watchlistAdd = {
