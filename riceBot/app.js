@@ -1,32 +1,28 @@
-import { InteractionResponseType } from 'discord-interactions';
-import { client } from '../../client.js';
-import { findWatchlistMessage } from './findMessage.js';
-import { parseWatchlist } from './parse.js';
-import { renderWatchlist } from './render.js';
+import 'dotenv/config';
+import express from 'express';
+import {
+InteractionType,
+InteractionResponseType,
+verifyKeyMiddleware,
+} from 'discord-interactions';
 
-export const watchlistAdd = {
-    name: 'watchlist_add',
+import { handleInteraction } from './interactions/index.js';
+import { client } from './client.js';
 
-    async execute(req, res) {
-        const channel = await client.channels.fetch(req.body.channel_id);
-        const text = req.body.data.options[0].value;
+const app = express();
+const PORT = process.env.PORT || 3000;
 
-        const message = await findWatchlistMessage(channel);
-        if (!message) {
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Список не найден.', flags: 64 },
-            });
-        }
+app.post(
+    '/interactions',
+    express.raw({ type: '*/*' }),
+    verifyKeyMiddleware(process.env.PUBLIC_KEY),
+    handleInteraction
+);
 
-        const items = parseWatchlist(message.content);
-        items.push(text);
+app.get('/ping', (req, res) => res.send('ok'));
 
-        await message.edit(renderWatchlist(items));
+app.listen(PORT, () => {
+    console.log(`🌐 Server running on ${PORT}`);
+});
 
-        return res.send({
-            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '✅ Добавлено.', flags: 64 },
-        });
-    },
-};
+client.login(process.env.DISCORD_TOKEN);
