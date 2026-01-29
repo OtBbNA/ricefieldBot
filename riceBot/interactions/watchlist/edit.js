@@ -25,6 +25,14 @@ export const watchlistEdit = {
     name: 'watchlist_edit',
 
     async execute(req, res) {
+
+        res.send({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+                flags: 64, // 👈 сообщение видно ТОЛЬКО пользователю
+            },
+        });
+
         const channelId = req.body.channel_id;
 
         const number = req.body.data.options.find(o => o.name === 'number')?.value;
@@ -68,5 +76,10 @@ export const watchlistEdit = {
                 flags: 64,
             },
         });
+
+        await fetch(
+            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+            { method: 'DELETE' }
+        );
     },
 };

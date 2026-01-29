@@ -19,6 +19,14 @@ export const watchlistRemove = {
     name: 'watchlist_remove',
 
     async execute(req, res) {
+
+        res.send({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+                flags: 64, // 👈 сообщение видно ТОЛЬКО пользователю
+            },
+        });
+
         const channelId = req.body.channel_id;
         const number = req.body.data.options[0].value;
 
@@ -59,5 +67,10 @@ export const watchlistRemove = {
                 flags: 64,
             },
         });
+
+        await fetch(
+            `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+            { method: 'DELETE' }
+        );
     },
 };
