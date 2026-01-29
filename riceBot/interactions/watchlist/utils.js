@@ -18,5 +18,5 @@ export function parseList(content) {
 
 export function buildMessage(list) {
     const body = list.map((t, i) => `${i + 1}. ${t}`).join('\n');
-    return `🎬 Кино на вечер 🎬\n\n${body || '_Список пуст_'}`;
+    return `ᛕᛋᚺᛜ ᚺᚤ ᛒᛊᛋᛊᚹ\n\n${body || '_Список пуст_'}`;
 }

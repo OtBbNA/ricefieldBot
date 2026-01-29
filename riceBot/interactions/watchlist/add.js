@@ -1,5 +1,8 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { getWatchlistMessage, parseList, buildMessage } from './utils.js';
+import { client } from '../../client.js';
+import { findWatchlistMessage } from '../../utils/findWatchlistMessage.js';
+import { parseWatchlist } from '../../utils/parseWatchlist.js';
+import { renderWatchlist } from '../../utils/renderWatchlist.js';
 
 export const data = {
     name: 'watchlist_add',
@@ -18,17 +21,33 @@ export const watchlistAdd = {
     name: 'watchlist_add',
 
     async execute(req, res) {
-        const text = req.body.data.options.find(o => o.name === 'text')?.value;
-        if (!text) return res.send({ type: 4, data: { content: '❌ Текст пуст.', flags: 64 } });
+        const channelId = req.body.channel_id;
+        const text = req.body.data.options[0].value;
 
-        const msg = await getWatchlistMessage(req.body.channel_id);
-        if (!msg) return res.send({ type: 4, data: { content: '❌ Список не найден.', flags: 64 } });
+        const channel = await client.channels.fetch(channelId);
+        const message = await findWatchlistMessage(channel);
 
-        const list = parseList(msg.content);
-        list.push(text);
+        if (!message) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ Список не найден. Используй /watchlist_create',
+                    flags: 64,
+                },
+            });
+        }
 
-        await msg.edit(buildMessage(list));
+        const items = parseWatchlist(message.content);
+        items.push(text);
 
-        return res.send({ type: 4, data: { content: '✅ Добавлено.', flags: 64 } });
+        await message.edit(renderWatchlist(items));
+
+        return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+                content: '✅ Добавлено в список.',
+                flags: 64,
+            },
+        });
     },
 };

@@ -1,0 +1,1 @@
+export const WATCHLIST_HEADER = 'ᛕᛋᚺᛜ ᚺᚤ ᛒᛊᛋᛊᚹ';

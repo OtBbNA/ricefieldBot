@@ -1,5 +1,8 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { getWatchlistMessage, parseList, buildMessage } from './utils.js';
+import { client } from '../../client.js';
+import { findWatchlistMessage } from '../../utils/findWatchlistMessage.js';
+import { parseWatchlist } from '../../utils/parseWatchlist.js';
+import { renderWatchlist } from '../../utils/renderWatchlist.js';
 
 export const data = {
     name: 'watchlist_edit',
@@ -24,20 +27,48 @@ export const watchlistEdit = {
     name: 'watchlist_edit',
 
     async execute(req, res) {
+        const channelId = req.body.channel_id;
+
         const number = req.body.data.options.find(o => o.name === 'number')?.value;
         const text = req.body.data.options.find(o => o.name === 'text')?.value;
 
-        const msg = await getWatchlistMessage(req.body.channel_id);
-        if (!msg) return res.send({ type: 4, data: { content: '❌ Список не найден.', flags: 64 } });
+        const channel = await client.channels.fetch(channelId);
+        const message = await findWatchlistMessage(channel);
 
-        const list = parseList(msg.content);
-        if (!list[number - 1]) {
-            return res.send({ type: 4, data: { content: '❌ Неверный номер.', flags: 64 } });
+        if (!message) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ Список не найден. Используй /watchlist_create',
+                    flags: 64,
+                },
+            });
         }
 
-        list[number - 1] = text;
-        await msg.edit(buildMessage(list));
+        const items = parseWatchlist(message.content);
+        const index = number - 1;
 
-        return res.send({ type: 4, data: { content: '✏️ Изменено.', flags: 64 } });
+        if (index < 0 || index >= items.length) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ Неверный номер в списке.',
+                    flags: 64,
+                },
+            });
+        }
+
+        const old = items[index];
+        items[index] = text;
+
+        await message.edit(renderWatchlist(items));
+
+        return res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: {
+                content: `✏️ **${old}** → **${text}**`,
+                flags: 64,
+            },
+        });
     },
 };
