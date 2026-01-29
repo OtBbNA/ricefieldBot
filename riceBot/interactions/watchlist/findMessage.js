@@ -1,4 +1,4 @@
-import { WATCHLIST_TITLE } from './constant.js';
+import { WATCHLIST_TITLE } from './constants.js';
 
 export async function findWatchlistMessage(channel) {
     const messages = await channel.messages.fetch({ limit: 50 });

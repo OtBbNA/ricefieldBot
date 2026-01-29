@@ -1,4 +1,4 @@
-import { WATCHLIST_TITLE } from './constant.js';
+import { WATCHLIST_TITLE } from './constants.js';
 
 export function renderWatchlist(items) {
     if (!items.length) return `${WATCHLIST_TITLE}\n\nСписок пуст`;
