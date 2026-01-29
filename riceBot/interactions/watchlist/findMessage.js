@@ -6,7 +6,6 @@ export async function findWatchlistMessage(channel) {
     return messages.find(
         m =>
         m.author?.bot &&
-        typeof m.content === 'string' &&
         m.content.startsWith(WATCHLIST_HEADER)
     );
 }
