@@ -1,1 +1,2 @@
-export const WATCHLIST_TITLE = 'ᛕᛋᚺᛜ ᚺᚤ ᛒᛊᛋᛊᚹ';
+export const LIST_HEADER_PREFIX = '-# Список №';
+export const MAX_FETCH_MESSAGES = 100;

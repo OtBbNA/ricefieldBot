@@ -1,38 +1,60 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { findWatchlistMessage } from './findMessage.js';
-import { parseWatchlist } from './parse.js';
-import { renderWatchlist } from './utils.js';
+import { findLists } from './findLists.js';
+import { parseList } from './parseList.js';
+import { renderList } from './renderList.js';
 
-export const watchlistEdit = {
+export const listEdit = {
+    name: 'list_edit',
+
     async execute(req, res) {
-        const index = req.body.data.options[0].value - 1;
-        const newText = req.body.data.options[1].value;
+        const options = req.body.data.options;
+
+        const listId = options.find(o => o.name === 'list')?.value;
+        const itemIndex = options.find(o => o.name === 'item')?.value;
+        const newText = options.find(o => o.name === 'text')?.value?.trim();
+
+        if (!listId || !itemIndex || !newText) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: {
+                    content: '❌ Использование: /list_edit list:<номер> item:<номер> text:<текст>',
+                    flags: 64,
+                },
+            });
+        }
 
         const channel = await req.client.channels.fetch(req.body.channel_id);
-        const msg = await findWatchlistMessage(channel);
+        const lists = await findLists(channel);
+        const list = lists.find(l => l.id === listId);
 
-        if (!msg) {
+        if (!list) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Список не найден', flags: 64 },
+                data: { content: '❌ Список с таким номером не найден.', flags: 64 },
             });
         }
 
-        const items = parseWatchlist(msg.content);
+        const items = parseList(list.message.content);
 
-        if (index < 0 || index >= items.length) {
+        if (itemIndex < 1 || itemIndex > items.length) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Неверный номер', flags: 64 },
+                data: { content: '❌ Пункт с таким номером не найден.', flags: 64 },
             });
         }
 
-        items[index] = newText;
-        await msg.edit(renderWatchlist(items));
+        items[itemIndex - 1] = newText;
 
-        res.send({
+        await list.message.edit(
+            renderList(list.name, list.id, items)
+        );
+
+        return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '✅ Изменено', flags: 64 },
+            data: {
+                content: `✏️ Пункт №${itemIndex} в списке №${listId} изменён.`,
+                flags: 64,
+            },
         });
     },
 };

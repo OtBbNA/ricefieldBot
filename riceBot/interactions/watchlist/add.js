@@ -1,29 +1,41 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { findWatchlistMessage } from './findMessage.js';
-import { parseWatchlist } from './parse.js';
-import { renderWatchlist } from './utils.js';
+import { findLists } from './findLists.js';
+import { parseList } from './parseList.js';
+import { renderList } from './renderList.js';
 
-export const watchlistAdd = {
+export const listAdd = {
+    name: 'list_add',
+
     async execute(req, res) {
-        const text = req.body.data.options[0].value;
-        const channel = await req.client.channels.fetch(req.body.channel_id);
+        const id = Number(req.body.data.options.find(o => o.name === 'id')?.value);
+        const text = req.body.data.options.find(o => o.name === 'text')?.value?.trim();
 
-        const msg = await findWatchlistMessage(channel);
-        if (!msg) {
+        if (!id || !text) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Список не найден', flags: 64 },
+                data: { content: '❌ Укажи номер списка и текст.', flags: 64 },
             });
         }
 
-        const items = parseWatchlist(msg.content);
+        const channel = await req.client.channels.fetch(req.body.channel_id);
+        const lists = await findLists(channel);
+        const list = lists.find(l => l.id === id);
+
+        if (!list) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: { content: '❌ Список не найден.', flags: 64 },
+            });
+        }
+
+        const items = parseList(list.message.content);
         items.push(text);
 
-        await msg.edit(renderWatchlist(items));
+        await list.message.edit(renderList(list.name, list.id, items));
 
-        res.send({
+        return res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '✅ Добавлено', flags: 64 },
+            data: { content: '✅ Добавлено.', flags: 64 },
         });
     },
 };

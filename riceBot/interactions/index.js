@@ -1,17 +1,17 @@
 import { InteractionType, InteractionResponseType } from 'discord-interactions';
 import { rateCommand } from './rate.js';
 
-import { watchlistCreate } from './watchlist/create.js';
-import { watchlistAdd } from './watchlist/add.js';
-import { watchlistEdit } from './watchlist/edit.js';
-import { watchlistRemove } from './watchlist/remove.js';
+import { listCreate } from './watchlist/create.js';
+import { listAdd } from './watchlist/add.js';
+import { listEdit } from './watchlist/edit.js';
+import { listRemove } from './watchlist/remove.js';
 
 const commands = new Map([
     ['rate', rateCommand],
-    ['watchlist_create', watchlistCreate],
-    ['watchlist_add', watchlistAdd],
-    ['watchlist_edit', watchlistEdit],
-    ['watchlist_remove', watchlistRemove],
+    ['list_create', listCreate],
+    ['list_add', listAdd],
+    ['list_edit', listEdit],
+    ['list_remove', listRemove],
 ]);
 
 export function handleInteraction(req, res) {
