@@ -13,7 +13,7 @@ export const data = {
     ]
 };
 
-export const watchlistAdd = {
+export const listAdd = {
     async execute(req, res) {
         const listId = req.body.data.options.find(o => o.name === 'list_id').value;
         const text = req.body.data.options.find(o => o.name === 'text').value;

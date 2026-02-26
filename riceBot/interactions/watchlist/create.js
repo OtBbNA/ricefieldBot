@@ -13,7 +13,7 @@ export const data = {
     }]
 };
 
-export const watchlistCreate = {
+export const listCreate = {
     async execute(req, res) {
         const title = req.body.data.options[0].value;
         const channel = await req.client.channels.fetch(req.body.channel_id);

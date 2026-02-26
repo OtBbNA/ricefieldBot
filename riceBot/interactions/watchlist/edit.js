@@ -28,7 +28,7 @@ export const data = {
     ]
 };
 
-export const watchlistEdit = {
+export const listEdit = {
     async execute(req, res) {
         const listId = req.body.data.options.find(o => o.name === 'list_id').value;
         const index = req.body.data.options.find(o => o.name === 'number').value - 1;
