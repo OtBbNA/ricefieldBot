@@ -15,14 +15,6 @@ export const data = {
     ]
 };
 
-async function updateResponse(appId, token, content) {
-    await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-    });
-}
-
 export const listAdd = {
     async execute(req, res) {
         res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: 64 } });
@@ -32,22 +24,29 @@ export const listAdd = {
         const text = req.body.data.options.find(o => o.name === 'text').value;
 
         try {
-            console.log(`[Add] Ищу список ${listId}`);
             const msg = await findWatchlistById(channelId, listId);
-
             if (!msg) return await updateResponse(appId, token, `❌ Список №${listId} не найден.`);
 
             const { title, items } = parseWatchlist(msg.content);
             items.push(text);
 
+            // Редактируем сообщение через REST PATCH
             await rest.patch(Routes.channelMessage(channelId, msg.id), {
                 body: { content: renderWatchlist(listId, title, items) }
             });
 
             await updateResponse(appId, token, `✅ Добавлено в список №${listId}`);
         } catch (err) {
-            console.error(`[Add Error]`, err);
+            console.error(err);
             await updateResponse(appId, token, `❌ Ошибка: ${err.message}`);
         }
     }
 };
+
+async function updateResponse(appId, token, content) {
+    await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ content })
+    });
+}
