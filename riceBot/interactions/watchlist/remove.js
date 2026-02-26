@@ -1,4 +1,6 @@
 import { InteractionResponseType } from 'discord-interactions';
+import { Routes } from 'discord.js';
+import { rest } from '../../client.js';
 import { findWatchlistById } from './findMessage.js';
 import { parseWatchlist } from './parse.js';
 import { renderWatchlist } from './utils.js';
@@ -33,7 +35,9 @@ export const listRemove = {
             if (index < 0 || index >= items.length) return updateResponse(appId, token, `❌ Неверный номер строки`);
 
             items.splice(index, 1);
-            await msg.edit(renderWatchlist(listId, title, items));
+            await rest.patch(Routes.channelMessage(channelId, msg.id), {
+                body: { content: renderWatchlist(listId, title, items) }
+            });
             await updateResponse(appId, token, `🗑 Удалено из списка №${listId}`);
         } catch (err) {
             console.error(err);

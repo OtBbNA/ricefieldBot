@@ -43,7 +43,11 @@ export const rateCommand = {
 
             await fetch(
                 `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-                { method: 'DELETE' }
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content: '✅ Реакции добавлены' }),
+                }
             );
         } catch (e) {
             console.error(e);
