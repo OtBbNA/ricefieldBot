@@ -1,43 +1,43 @@
-import { Routes } from 'discord.js';
-import { rest } from '../../client.js';
 import { LIST_HEADER_PREFIX } from './constants.js';
 
-export async function findWatchlistById(channelId, listId) {
-    console.log(`[REST] Ищу список №${listId} в канале ${channelId}`);
-    const messages = await rest.get(Routes.channelMessages(channelId), {
-        query: new URLSearchParams({ limit: 50 })
-    });
+export async function findWatchlistById(channel, listId) {
+    console.log(`[Log] Ищу сообщение списка №${listId}...`);
 
-    if (!messages || !Array.isArray(messages)) return null;
+    // Получаем последние 50 сообщений в канале
+    const messages = await channel.messages.fetch({ limit: 50 });
 
+    // Ищем то, которое начинается с нужного префикса и ID
     return messages.find(m =>
+    m.author.bot &&
     m.content.startsWith(`${LIST_HEADER_PREFIX}${listId}`)
     );
 }
 
-export async function getNextListId(channelId) {
-    console.log(`[REST] Считаю следующий ID для канала ${channelId}`);
+/**
+ * Определяет следующий доступный ID для нового списка
+ * @param {Object} channel - Объект канала из discord.js
+ */
+export async function getNextListId(channel) {
+    console.log(`[Log] Определяю следующий ID списка...`);
 
-    try {
-        // Добавляем гонку: либо ответ от Дискорда, либо ошибка через 7 секунд
-        const messages = await Promise.race([
-            rest.get(Routes.channelMessages(channelId), { query: new URLSearchParams({ limit: 50 }) }),
-            new Promise((_, reject) => setTimeout(() => reject(new Error('Discord REST Timeout (7s)')), 7000))
-        ]);
+    const messages = await channel.messages.fetch({ limit: 50 });
 
-        if (!messages || !Array.isArray(messages)) return 1;
+    // Фильтруем только сообщения, созданные ботом и являющиеся списками
+    const listMessages = messages.filter(m =>
+    m.author.bot && m.content.startsWith(LIST_HEADER_PREFIX)
+    );
 
-        const listMessages = messages.filter(m => m.content.startsWith(LIST_HEADER_PREFIX));
+    let maxId = 0;
 
-        let maxId = 0;
-        listMessages.forEach(m => {
-            const firstPart = m.content.split(' ')[0];
-            const id = parseInt(firstPart.replace(LIST_HEADER_PREFIX, ''));
-            if (!isNaN(id) && id > maxId) maxId = id;
-        });
-        return maxId + 1;
-    } catch (error) {
-        console.error(`[REST Error] Не удалось получить сообщения:`, error.message);
-        throw error; // Бросаем выше, чтобы сработал catch в create.js
-    }
+    listMessages.forEach(m => {
+        // Вытаскиваем число из строки типа "ID_LIST_1"
+        const firstPart = m.content.split(' ')[0]; // Допустим "ID_LIST_1"
+        const id = parseInt(firstPart.replace(LIST_HEADER_PREFIX, ''));
+
+        if (!isNaN(id) && id > maxId) {
+            maxId = id;
+        }
+    });
+
+    return maxId + 1;
 }
