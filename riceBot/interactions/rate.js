@@ -1,7 +1,7 @@
 import { InteractionResponseType } from 'discord-interactions';
 import { client } from '../client.js';
 import { parseMessageLink } from '../utils/parseMessageLink.js';
-import fetch from 'node-fetch';
+import { updateOriginalInteractionResponse } from './discordResponse.js';
 
 export const data = {
     name: 'rate',
@@ -11,56 +11,33 @@ export const data = {
             name: 'link',
             type: 3, // STRING
             description: 'Ссылка на сообщение',
-            required: true
-        }
-    ]
+            required: true,
+        },
+    ],
 };
 
 export const rateCommand = {
-    async execute(req, res) {
+    async execute({ req, replyFinal }) {
         const link = req.body.data.options[0].value;
         const parsed = parseMessageLink(link);
 
         if (!parsed) {
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Неверная ссылка', flags: 64 },
-            });
+            await replyFinal('❌ Неверная ссылка');
+            return;
         }
-
-        res.send({
-            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { flags: 64 },
-        });
 
         try {
             const channel = await client.channels.fetch(parsed.channelId);
             const msg = await channel.messages.fetch(parsed.messageId);
 
-            for (const e of ['1️⃣','2️⃣','3️⃣','4️⃣','5️⃣','6️⃣','7️⃣','8️⃣','9️⃣','🔟']) {
-                await msg.react(e);
+            for (const emoji of ['1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟']) {
+                await msg.react(emoji);
             }
 
-            await fetch(
-                `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-                {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: '✅ Реакции добавлены' }),
-                }
-            );
-        } catch (e) {
-            console.error(e);
-            await fetch(
-                `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
-                {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        content: '❌ Не удалось проставить реакции (проверь права бота и ссылку)',
-                    }),
-                }
-            );
+            await replyFinal('✅ Реакции добавлены');
+        } catch (error) {
+            console.error(error);
+            await replyFinal('❌ Не удалось проставить реакции (проверь права бота и ссылку)');
         }
     },
 };

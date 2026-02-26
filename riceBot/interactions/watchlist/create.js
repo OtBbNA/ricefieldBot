@@ -3,7 +3,7 @@ import { Routes } from 'discord.js';
 import { rest } from '../../client.js';
 import { getNextListId } from './findMessage.js';
 import { renderWatchlist } from './utils.js';
-import fetch from 'node-fetch';
+import { updateOriginalInteractionResponse } from '../discordResponse.js';
 
 export const data = {
     name: 'list_create',
@@ -24,15 +24,15 @@ export const listCreate = {
             data: { flags: 64 }
         });
 
-        const title = req.body.data.options[0].value;
         const appId = req.body.application_id;
         const token = req.body.token;
         const channelId = req.body.channel_id;
 
         try {
-            const title = req.body.data?.options?.find(o => o.name === 'title')?.value;
+            const options = req.body?.data?.options ?? [];
+            const title = options.find(o => o.name === 'title')?.value;
             if (!title) {
-                await updateResponse(appId, token, '❌ Не передан title для списка');
+                await updateOriginalInteractionResponse(appId, token, '❌ Не передан title для списка');
                 return;
             }
 
@@ -55,20 +55,11 @@ export const listCreate = {
             }
 
             // 5. Финальное подтверждение пользователю
-            await updateResponse(appId, token, `✅ Список №${nextId} создан и закреплен!`);
+            await updateOriginalInteractionResponse(appId, token, `✅ Список №${nextId} создан и закреплен!`);
 
         } catch (err) {
             console.error(`[Create Critical Error]`, err);
-            await updateResponse(appId, token, `❌ Ошибка при создании: ${err.message}`);
+            await updateOriginalInteractionResponse(appId, token, `❌ Ошибка при создании: ${err.message}`);
         }
     },
 };
-
-// Вспомогательная функция для обновления "думающего" сообщения
-async function updateResponse(appId, token, content) {
-    await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ content })
-    });
-}

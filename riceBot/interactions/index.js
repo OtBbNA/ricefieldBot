@@ -1,5 +1,6 @@
 import { InteractionType, InteractionResponseType } from 'discord-interactions';
 import { rateCommand } from './rate.js';
+import { replyFinal } from './replyFinal.js';
 
 import { listCreate } from './watchlist/create.js';
 import { listAdd } from './watchlist/add.js';
@@ -14,7 +15,7 @@ const commands = new Map([
     ['list_remove', listRemove],
 ]);
 
-export function handleInteraction(req, res) {
+export async function handleInteraction(req, res) {
     const { type, data } = req.body;
 
     if (type === InteractionType.PING) {
@@ -29,7 +30,21 @@ export function handleInteraction(req, res) {
                 data: { content: '❌ Неизвестная команда', flags: 64 },
             });
         }
-        return command.execute(req, res);
+        res.send({
+            type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { flags: 64 },
+        });
+        const context = {
+            req,
+            replyFinal: (content) => replyFinal(req, content),
+        };
+        try {
+            await command.execute(context);
+        } catch (error) {
+            console.error(error);
+            await context.replyFinal('❌ Внутренняя ошибка');
+        }
+        return;
     }
 
     res.sendStatus(400);
