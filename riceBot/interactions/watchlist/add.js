@@ -1,4 +1,5 @@
-import { InteractionResponseType, Routes } from 'discord.js';
+import { InteractionResponseType } from 'discord-interactions';
+import { Routes } from 'discord.js';
 import { rest } from '../../client.js';
 import { findWatchlistById } from './findMessage.js';
 import { parseWatchlist } from './parse.js';
@@ -24,14 +25,14 @@ async function updateResponse(appId, token, content) {
 
 export const listAdd = {
     async execute(req, res) {
-        res.send({ type: 5, data: { flags: 64 } }); // 5 — это DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE
+        res.send({ type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE, data: { flags: 64 } });
 
         const { application_id: appId, token, channel_id: channelId } = req.body;
         const listId = req.body.data.options.find(o => o.name === 'list_id').value;
         const text = req.body.data.options.find(o => o.name === 'text').value;
 
         try {
-            // Ищем сообщение (теперь передаем только ID канала!)
+            console.log(`[Add] Ищу список ${listId}`);
             const msg = await findWatchlistById(channelId, listId);
 
             if (!msg) return await updateResponse(appId, token, `❌ Список №${listId} не найден.`);
@@ -39,14 +40,13 @@ export const listAdd = {
             const { title, items } = parseWatchlist(msg.content);
             items.push(text);
 
-            // Редактируем сообщение напрямую через REST
             await rest.patch(Routes.channelMessage(channelId, msg.id), {
                 body: { content: renderWatchlist(listId, title, items) }
             });
 
             await updateResponse(appId, token, `✅ Добавлено в список №${listId}`);
         } catch (err) {
-            console.error(err);
+            console.error(`[Add Error]`, err);
             await updateResponse(appId, token, `❌ Ошибка: ${err.message}`);
         }
     }
