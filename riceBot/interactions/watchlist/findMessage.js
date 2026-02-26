@@ -1,34 +1,34 @@
+import { Routes } from 'discord.js';
+import { rest } from '../../client.js';
 import { LIST_HEADER_PREFIX, MAX_FETCH_MESSAGES } from './constants.js';
 
-// Ищем конкретный список по ID
-export async function findWatchlistById(channel, listId) {
-    const messages = await channel.messages.fetch({ limit: MAX_FETCH_MESSAGES });
+// Ищем сообщение через прямой запрос по ID списка
+export async function findWatchlistById(channelId, listId) {
+    const messages = await rest.get(Routes.channelMessages(channelId), {
+        query: new URLSearchParams({ limit: 50 })
+    });
+
     return messages.find(m =>
     m.author.bot &&
     m.content.startsWith(`${LIST_HEADER_PREFIX}${listId}`)
     );
 }
 
-// Генерируем новый ID для нового списка
-export async function getNextListId(channel) {
-    const messages = await channel.messages.fetch({ limit: MAX_FETCH_MESSAGES });
+// Ищем следующий свободный номер списка
+export async function getNextListId(channelId) {
+    const messages = await rest.get(Routes.channelMessages(channelId), {
+        query: new URLSearchParams({ limit: 50 })
+    });
 
-    // Фильтруем сообщения, которые являются списками
     const listMessages = messages.filter(m =>
     m.author.bot && m.content.startsWith(LIST_HEADER_PREFIX)
     );
 
     let maxId = 0;
     listMessages.forEach(m => {
-        // Вытаскиваем число из строки вида "ID_LIST_3 | ..."
-        const firstPart = m.content.split(' ')[0]; // Получим "ID_LIST_3"
-        const idString = firstPart.replace(LIST_HEADER_PREFIX, ''); // Получим "3"
-        const id = parseInt(idString);
-
-        if (!isNaN(id) && id > maxId) {
-            maxId = id;
-        }
+        const firstPart = m.content.split(' ')[0];
+        const id = parseInt(firstPart.replace(LIST_HEADER_PREFIX, ''));
+        if (!isNaN(id) && id > maxId) maxId = id;
     });
-
     return maxId + 1;
 }
