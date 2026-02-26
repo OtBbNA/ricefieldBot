@@ -1,29 +1,57 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { findLists } from './findLists.js';
-import { parseList } from './parseList.js';
-import { renderList } from './renderList.js';
+import { findWatchlistById } from './findMessage.js';
+import { parseWatchlist } from './parse.js';
+import { renderWatchlist } from './utils.js';
 
-export const listRemove = {
-    name: 'list_remove',
+export const data = {
+    name: 'watchlist_remove',
+    description: 'Удалить элемент из конкретного списка',
+    options: [
+        {
+            name: 'list_id',
+            type: 4, // INTEGER
+            description: 'Номер списка',
+            required: true,
+        },
+        {
+            name: 'number',
+            type: 4, // INTEGER
+            description: 'Номер элемента в списке',
+            required: true,
+        }
+    ]
+};
 
+export const watchlistRemove = {
     async execute(req, res) {
-        const id = Number(req.body.data.options.find(o => o.name === 'id')?.value);
-        const index = Number(req.body.data.options.find(o => o.name === 'index')?.value);
+        const listId = req.body.data.options.find(o => o.name === 'list_id').value;
+        const index = req.body.data.options.find(o => o.name === 'number').value - 1;
 
         const channel = await req.client.channels.fetch(req.body.channel_id);
-        const list = (await findLists(channel)).find(l => l.id === id);
+        const msg = await findWatchlistById(channel, listId);
 
-        if (!list) return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Список не найден.', flags: 64 }});
-
-        const items = parseList(list.message.content);
-
-        if (index < 1 || index > items.length) {
-            return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '❌ Неверный номер пункта.', flags: 64 }});
+        if (!msg) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: { content: `❌ Список №${listId} не найден`, flags: 64 },
+            });
         }
 
-        items.splice(index - 1, 1);
-        await list.message.edit(renderList(list.name, list.id, items));
+        const { title, items } = parseWatchlist(msg.content);
 
-        return res.send({ type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE, data: { content: '🗑 Удалено.', flags: 64 }});
+        if (index < 0 || index >= items.length) {
+            return res.send({
+                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+                data: { content: '❌ Неверный номер элемента в списке', flags: 64 },
+            });
+        }
+
+        items.splice(index, 1);
+        await msg.edit(renderWatchlist(listId, title, items));
+
+        res.send({
+            type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
+            data: { content: `🗑 Удалено из списка №${listId}`, flags: 64 },
+        });
     },
 };

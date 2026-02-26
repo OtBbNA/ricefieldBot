@@ -1,41 +1,41 @@
+
 import { InteractionResponseType } from 'discord-interactions';
-import { findLists } from './findLists.js';
-import { parseList } from './parseList.js';
-import { renderList } from './renderList.js';
+import { findWatchlistById } from './findMessage.js';
+import { parseWatchlist } from './parse.js';
+import { renderWatchlist } from './utils.js';
 
-export const listAdd = {
-    name: 'list_add',
+export const data = {
+    name: 'watchlist_add',
+    description: 'Добавить в список',
+    options: [
+        { name: 'list_id', type: 4, description: 'Номер списка (ID)', required: true },
+        { name: 'text', type: 3, description: 'Что добавить', required: true }
+    ]
+};
 
+export const watchlistAdd = {
     async execute(req, res) {
-        const id = Number(req.body.data.options.find(o => o.name === 'id')?.value);
-        const text = req.body.data.options.find(o => o.name === 'text')?.value?.trim();
-
-        if (!id || !text) {
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Укажи номер списка и текст.', flags: 64 },
-            });
-        }
+        const listId = req.body.data.options.find(o => o.name === 'list_id').value;
+        const text = req.body.data.options.find(o => o.name === 'text').value;
 
         const channel = await req.client.channels.fetch(req.body.channel_id);
-        const lists = await findLists(channel);
-        const list = lists.find(l => l.id === id);
+        const msg = await findWatchlistById(channel, listId);
 
-        if (!list) {
+        if (!msg) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Список не найден.', flags: 64 },
+                data: { content: `❌ Список №${listId} не найден в этом канале`, flags: 64 },
             });
         }
 
-        const items = parseList(list.message.content);
+        const { title, items } = parseWatchlist(msg.content);
         items.push(text);
 
-        await list.message.edit(renderList(list.name, list.id, items));
+        await msg.edit(renderWatchlist(listId, title, items));
 
-        return res.send({
+        res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: { content: '✅ Добавлено.', flags: 64 },
+            data: { content: `✅ Добавлено в список №${listId}`, flags: 64 },
         });
     },
 };

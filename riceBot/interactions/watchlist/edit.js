@@ -1,60 +1,64 @@
 import { InteractionResponseType } from 'discord-interactions';
-import { findLists } from './findLists.js';
-import { parseList } from './parseList.js';
-import { renderList } from './renderList.js';
+import { findWatchlistById } from './findMessage.js';
+import { parseWatchlist } from './parse.js';
+import { renderWatchlist } from './utils.js';
 
-export const listEdit = {
-    name: 'list_edit',
-
-    async execute(req, res) {
-        const options = req.body.data.options;
-
-        const listId = options.find(o => o.name === 'list')?.value;
-        const itemIndex = options.find(o => o.name === 'item')?.value;
-        const newText = options.find(o => o.name === 'text')?.value?.trim();
-
-        if (!listId || !itemIndex || !newText) {
-            return res.send({
-                type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: {
-                    content: '❌ Использование: /list_edit list:<номер> item:<номер> text:<текст>',
-                    flags: 64,
-                },
-            });
+export const data = {
+    name: 'watchlist_edit',
+    description: 'Изменить текст элемента в списке',
+    options: [
+        {
+            name: 'list_id',
+            type: 4, // INTEGER
+            description: 'Номер списка',
+            required: true,
+        },
+        {
+            name: 'number',
+            type: 4, // INTEGER
+            description: 'Номер элемента в списке',
+            required: true,
+        },
+        {
+            name: 'text',
+            type: 3, // STRING
+            description: 'Новый текст',
+            required: true,
         }
+    ]
+};
+
+export const watchlistEdit = {
+    async execute(req, res) {
+        const listId = req.body.data.options.find(o => o.name === 'list_id').value;
+        const index = req.body.data.options.find(o => o.name === 'number').value - 1;
+        const newText = req.body.data.options.find(o => o.name === 'text').value;
 
         const channel = await req.client.channels.fetch(req.body.channel_id);
-        const lists = await findLists(channel);
-        const list = lists.find(l => l.id === listId);
+        const msg = await findWatchlistById(channel, listId);
 
-        if (!list) {
+        if (!msg) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Список с таким номером не найден.', flags: 64 },
+                data: { content: `❌ Список №${listId} не найден`, flags: 64 },
             });
         }
 
-        const items = parseList(list.message.content);
+        const { title, items } = parseWatchlist(msg.content);
 
-        if (itemIndex < 1 || itemIndex > items.length) {
+        if (index < 0 || index >= items.length) {
             return res.send({
                 type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-                data: { content: '❌ Пункт с таким номером не найден.', flags: 64 },
+                data: { content: '❌ Неверный номер элемента', flags: 64 },
             });
         }
 
-        items[itemIndex - 1] = newText;
+        items[index] = newText;
+        await msg.edit(renderWatchlist(listId, title, items));
 
-        await list.message.edit(
-            renderList(list.name, list.id, items)
-        );
-
-        return res.send({
+        res.send({
             type: InteractionResponseType.CHANNEL_MESSAGE_WITH_SOURCE,
-            data: {
-                content: `✏️ Пункт №${itemIndex} в списке №${listId} изменён.`,
-                flags: 64,
-            },
+            data: { content: `✅ Элемент в списке №${listId} изменен`, flags: 64 },
         });
     },
 };
