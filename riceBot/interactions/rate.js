@@ -3,6 +3,19 @@ import { client } from '../client.js';
 import { parseMessageLink } from '../utils/parseMessageLink.js';
 import fetch from 'node-fetch';
 
+export const data = {
+    name: 'rate',
+    description: 'Добавить реакции-цифры к сообщению по ссылке',
+    options: [
+        {
+            name: 'link',
+            type: 3, // STRING
+            description: 'Ссылка на сообщение',
+            required: true
+        }
+    ]
+};
+
 export const rateCommand = {
     async execute(req, res) {
         const link = req.body.data.options[0].value;
