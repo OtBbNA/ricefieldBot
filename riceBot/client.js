@@ -10,8 +10,8 @@ export const client = new Client({
     ],
 });
 
-client.once('clientReady', () => {
-    console.log(`✅ Logged in as ${client.user.tag}`);
-});
+client.login(config.token).catch(err => console.error("Ошибка логина:", err));
 
-client.login(config.token);
+client.once('ready', () => {
+    console.log(`✅ Бот успешно авторизован как ${client.user.tag}`);
+});
