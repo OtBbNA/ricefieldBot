@@ -10,8 +10,8 @@ export const client = new Client({
     ],
 });
 
-client.login(config.token).catch(err => console.error("Ошибка логина:", err));
+export const rest = new REST({ version: '10' }).setToken(config.token);
 
-client.once('ready', () => {
-    console.log(`✅ Бот успешно авторизован как ${client.user.tag}`);
+client.login(config.token).catch(() => {
+    console.log("⚠️ WebSocket не подключился, но мы будем работать через REST");
 });
