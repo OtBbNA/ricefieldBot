@@ -5,7 +5,7 @@ import { parseWatchlist } from './parse.js';
 import { renderWatchlist } from './utils.js';
 
 export const data = {
-    name: 'watchlist_add',
+    name: 'list_add',
     description: 'Добавить в список',
     options: [
         { name: 'list_id', type: 4, description: 'Номер списка (ID)', required: true },

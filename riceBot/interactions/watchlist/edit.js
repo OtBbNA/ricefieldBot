@@ -4,7 +4,7 @@ import { parseWatchlist } from './parse.js';
 import { renderWatchlist } from './utils.js';
 
 export const data = {
-    name: 'watchlist_edit',
+    name: 'list_edit',
     description: 'Изменить текст элемента в списке',
     options: [
         {

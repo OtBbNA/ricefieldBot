@@ -4,7 +4,7 @@ import { parseWatchlist } from './parse.js';
 import { renderWatchlist } from './utils.js';
 
 export const data = {
-    name: 'watchlist_remove',
+    name: 'list_remove',
     description: 'Удалить элемент из конкретного списка',
     options: [
         {

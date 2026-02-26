@@ -3,7 +3,7 @@ import { getNextListId } from './findMessage.js';
 import { renderWatchlist } from './utils.js';
 
 export const data = {
-    name: 'watchlist_create',
+    name: 'list_create',
     description: 'Создать новый список',
     options: [{
         name: 'title',
