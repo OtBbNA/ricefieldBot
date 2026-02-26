@@ -1,3 +1,4 @@
+// riceBot/interactions/watchlist/create.js
 import { InteractionResponseType } from 'discord-interactions';
 import { getNextListId } from './findMessage.js';
 import { renderWatchlist } from './utils.js';
@@ -14,9 +15,34 @@ export const data = {
     }]
 };
 
+// Функция для отправки ответа через вебхук (вынесена вверх, чтобы была доступна везде)
+async function updateResponse(appId, token, content) {
+    try {
+        await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ content })
+        });
+    } catch (e) {
+        console.error("Ошибка при отправке updateResponse:", e);
+    }
+}
+
+// Функция ожидания готовности клиента
+const waitUntilReady = (client, timeout = 10000) => {
+    if (client.isReady()) return Promise.resolve();
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => reject(new Error('Discord client failed to ready in time')), timeout);
+        client.once('ready', () => {
+            clearTimeout(timer);
+            resolve();
+        });
+    });
+};
+
 export const listCreate = {
     async execute(req, res) {
-        // 1. Мгновенно отвечаем Дискорду
+        // Мгновенный ответ
         res.send({
             type: InteractionResponseType.DEFERRED_CHANNEL_MESSAGE_WITH_SOURCE,
             data: { flags: 64 }
@@ -27,27 +53,22 @@ export const listCreate = {
         const token = req.body.token;
         const channelId = req.body.channel_id;
 
-        // Внутри execute в create.js (и других файлах)
         try {
-            console.log(`[Log] Пробую получить канал...`);
+            console.log(`[Log] Ждем готовности клиента...`);
+            await waitUntilReady(req.client);
 
-            // Попытка получить из кэша, если fetch виснет
-            let channel = req.client.channels.cache.get(channelId);
+            console.log(`[Log] Клиент готов. Получаем канал ${channelId}`);
+            const channel = await req.client.channels.fetch(channelId);
 
-            if (!channel) {
-                console.log(`[Log] Канала нет в кэше, делаю fetch...`);
-                // Устанавливаем таймаут на fetch, чтобы он не висел вечно
-                channel = await Promise.race([
-                    req.client.channels.fetch(channelId),
-                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching channel')), 5000))
-                ]);
-            }
+            const nextId = await getNextListId(channel);
+            const content = renderWatchlist(nextId, title, []);
 
-            console.log(`[Log] Канал успешно получен: ${channel.id}`);
-            // ... остальной код
+            await channel.send(content);
+            await updateResponse(appId, token, `✅ Список №${nextId} создан!`);
+
         } catch (err) {
-            console.error(`[Error] Ошибка на этапе получения канала:`, err.message);
-            await updateResponse(appId, token, `❌ Ошибка доступа к каналу: ${err.message}`);
+            console.error(`[Critical Error]`, err);
+            await updateResponse(appId, token, `❌ Ошибка: ${err.message}`);
         }
     },
 };
