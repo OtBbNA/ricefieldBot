@@ -24,11 +24,10 @@ export const listEdit = {
         const listId = req.body.data.options.find(o => o.name === 'list_id').value;
         const index = req.body.data.options.find(o => o.name === 'number').value - 1;
         const newText = req.body.data.options.find(o => o.name === 'text').value;
-        const { application_id: appId, token } = req.body;
+        const { application_id: appId, token, channel_id: channelId } = req.body;
 
         try {
-            const channel = await req.client.channels.fetch(req.body.channel_id);
-            const msg = await findWatchlistById(channel, listId);
+            const msg = await findWatchlistById(channelId, listId);
 
             if (!msg) return updateResponse(appId, token, `❌ Список №${listId} не найден`);
 

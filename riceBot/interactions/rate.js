@@ -47,6 +47,16 @@ export const rateCommand = {
             );
         } catch (e) {
             console.error(e);
+            await fetch(
+                `https://discord.com/api/v10/webhooks/${req.body.application_id}/${req.body.token}/messages/@original`,
+                {
+                    method: 'PATCH',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: '❌ Не удалось проставить реакции (проверь права бота и ссылку)',
+                    }),
+                }
+            );
         }
     },
 };
