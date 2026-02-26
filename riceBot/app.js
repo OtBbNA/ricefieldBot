@@ -16,6 +16,10 @@ app.post(
     express.raw({ type: '*/*' }),
     verifyKeyMiddleware(config.publicKey),
     (req, res) => {
+        // Проверяем, авторизован ли клиент
+        if (!client.isReady()) {
+            console.log('⚠️ Клиент еще не готов, пропускаем запрос или ждем...');
+        }
         req.client = client;
         handleInteraction(req, res);
     }

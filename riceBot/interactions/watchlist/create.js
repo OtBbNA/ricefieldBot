@@ -27,48 +27,27 @@ export const listCreate = {
         const token = req.body.token;
         const channelId = req.body.channel_id;
 
+        // Внутри execute в create.js (и других файлах)
         try {
-            console.log(`[Log] Начинаю создание списка для канала: ${channelId}`);
+            console.log(`[Log] Пробую получить канал...`);
 
-            // Проверяем, есть ли клиент
-            if (!req.client) throw new Error("Discord Client not found in request");
+            // Попытка получить из кэша, если fetch виснет
+            let channel = req.client.channels.cache.get(channelId);
 
-            const channel = await req.client.channels.fetch(channelId);
-            console.log(`[Log] Канал найден: ${channel.name}`);
-
-            const nextId = await getNextListId(channel);
-            console.log(`[Log] Следующий ID: ${nextId}`);
-
-            const content = renderWatchlist(nextId, title, []);
-
-            // 2. Отправляем сообщение в канал
-            await channel.send(content);
-            console.log(`[Log] Сообщение отправлено в канал`);
-
-            // 3. Обновляем статус взаимодействия через Fetch
-            const response = await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
-                method: 'PATCH',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ content: `✅ Список №${nextId} создан!` })
-            });
-
-            if (!response.ok) {
-                const errText = await response.text();
-                console.error(`[Error] Discord API returned: ${errText}`);
+            if (!channel) {
+                console.log(`[Log] Канала нет в кэше, делаю fetch...`);
+                // Устанавливаем таймаут на fetch, чтобы он не висел вечно
+                channel = await Promise.race([
+                    req.client.channels.fetch(channelId),
+                    new Promise((_, reject) => setTimeout(() => reject(new Error('Timeout fetching channel')), 5000))
+                ]);
             }
 
+            console.log(`[Log] Канал успешно получен: ${channel.id}`);
+            // ... остальной код
         } catch (err) {
-            console.error(`[Critical Error]`, err);
-            // Пытаемся сообщить об ошибке пользователю, если что-то упало
-            try {
-                await fetch(`https://discord.com/api/v10/webhooks/${appId}/${token}/messages/@original`, {
-                    method: 'PATCH',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ content: `❌ Ошибка: ${err.message}` })
-                });
-            } catch (innerErr) {
-                console.error("Не удалось отправить сообщение об ошибке", innerErr);
-            }
+            console.error(`[Error] Ошибка на этапе получения канала:`, err.message);
+            await updateResponse(appId, token, `❌ Ошибка доступа к каналу: ${err.message}`);
         }
     },
 };
