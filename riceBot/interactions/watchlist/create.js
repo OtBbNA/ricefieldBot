@@ -30,7 +30,11 @@ export const listCreate = {
         const channelId = req.body.channel_id;
 
         try {
-            console.log(`[Create] Старт через REST + Pins. Канал: ${channelId}`);
+            const title = req.body.data?.options?.find(o => o.name === 'title')?.value;
+            if (!title) {
+                await updateResponse(appId, token, '❌ Не передан title для списка');
+                return;
+            }
 
             // 2. Получаем следующий ID (теперь ищем только в закрепах)
             const nextId = await getNextListId(channelId);
